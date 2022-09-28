@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Configuration status="DEBUG">
+    <Properties>
+        <Property name="pattern">%d{yyyy-MM-dd HH:mm:ss.SSS} [%t{12}] %-5level %c{1.}: %m\n</Property>
+        <Property name="pattern2">[%-5level] %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} - %msg%n</Property>
+        <Property name="filename">logs/trader.log</Property>
+        <Property name="rolling">logs/archive/trader.log.%d{yyyy-MM-dd-hh-mm}.gz</Property>
+    </Properties>
+    <Appenders>
+        <!--<RandomAccessFile name="file" fileName="${filename}" immediateFlush="false" append="true">
+            <PatternLayout pattern="${pattern}"/>
+        </RandomAccessFile>-->
+        <RollingRandomAccessFile name="file" fileName="${filename}" filePattern="${rolling}">
+            <PatternLayout pattern="${pattern}"/>
+            <Policies>
+                <SizeBasedTriggeringPolicy size="1 MB"/>
+            </Policies>
+            <DefaultRolloverStrategy max="30"/>
+        </RollingRandomAccessFile>
+        <Console name="console">
+            <PatternLayout pattern="${pattern}"/>
+        </Console>
+    </Appenders>
+    <Loggers>
+        <Root level="DEBUG" includeLocation="false">
+            <AppenderRef ref="console"/>
+            <AppenderRef ref="file"/>
+        </Root>
+    </Loggers>
+</Configuration>
