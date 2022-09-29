@@ -56,15 +56,7 @@ public class OkxPrivateWsJsonClient extends WsJsonClient implements SyncControl 
 
     @Override
     public void onOpen(EndpointConfig config) {
-        String timestamp = String.valueOf(System.currentTimeMillis() / 1000);
-        String signature = Signature.sign(timestamp + "GET/users/self/verify", Setting.SECRETKEY);
-        JSONObject login = JSONObject.of("apiKey", Setting.APIKEY);
-        login.put("passphrase", Setting.PASSPHRASE);
-        login.put("timestamp", timestamp);
-        login.put("sign", signature);
-        JSONArray args = JSONArray.of(login);
-        JSONObject packet = JSONObject.of("op", "login", "args", args);
-        send(packet);
+        send(PacketUtils.loginPacket());
         heartbeat(5, TimeUnit.SECONDS);
     }
 
@@ -95,6 +87,7 @@ public class OkxPrivateWsJsonClient extends WsJsonClient implements SyncControl 
                 break;
             case "error":
                 logger.error("login error, {}", message.toJSONString());
+                shutdown();
                 break;
         }
         return false;

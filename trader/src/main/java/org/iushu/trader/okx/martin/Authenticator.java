@@ -40,6 +40,11 @@ public class Authenticator implements OkxMessageConsumer {
         Integer position = order.getInteger("sz");
         String state = order.getString("state");
         long update = order.getLong("uTime");
+
+        double fillSz = order.getDoubleValue("fillSz");
+        if (fillSz > 0 && fillSz < position)
+            logger.warn("order {} not fulfilled {} {}", ordId, position, fillSz);
+
         MartinOrders martinOrders = MartinOrders.instance();
         switch (state) {
             case Constants.ORDER_STATE_LIVE:

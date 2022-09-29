@@ -60,16 +60,18 @@ public class Operator implements OkxMessageConsumer {
         }
 
         if (strategy.satisfy(ticker))
-            placeFirstOrder(first, price);
+            placeFirstOrder(price);
     }
 
-    private void placeFirstOrder(Order first, double latestPrice) {
+    private void placeFirstOrder(double latestPrice) {
         if (coolingDown() || !placing.compareAndSet(false, true))
             return;
 
         try {
-            if (first.getOrderId() != null)
-                throw new IllegalStateException("illegal first order " + first.getOrderId());
+            Order first = MartinOrders.instance().first();
+            if (first == null || first.getOrderId() != null)
+                throw new IllegalStateException("illegal martin order's situation");
+
             JSONObject packet = PacketUtils.placeOrderPacket(first);
             this.privateClient.sendAsync(packet, r -> {
                 if (r.isOK())
@@ -98,6 +100,13 @@ public class Operator implements OkxMessageConsumer {
             if (MartinOrders.instance().getOrder(order.getOrderId()) != order)  // reconfirm
                 return;     // could be closed by other thread
 
+            JSONObject packet = PacketUtils.cancelOrdersPacket();
+            this.privateClient.sendAsync(packet, r -> {
+                if (r.isOK())
+                    logger.info("sent cancel orders");
+                else
+                    logger.error("send cancel orders failed", r.getException());
+            });
             if (!OkxHttpUtils.closePosition(order.getPosSide())) {
                 logger.error("close all position failed");
                 return;

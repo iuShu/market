@@ -140,6 +140,10 @@ public class MartinOrders {
         prepareOrders();
     }
 
+    public void printOrders() {
+        this.orders.forEach((k, v) -> System.out.println(k + " " + v));
+    }
+
     public static void main(String[] args) {
         MartinOrders martinOrders = MartinOrders.instance();
         martinOrders.first().setPrice(20000);

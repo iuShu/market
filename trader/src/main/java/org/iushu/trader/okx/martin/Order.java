@@ -3,13 +3,9 @@ package org.iushu.trader.okx.martin;
 import org.iushu.trader.base.Constants;
 import org.iushu.trader.base.PosSide;
 
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class Order {
-
-    private static final int STATE_LIVE = 1;
-    private static final int STATE_FILLED = 2;
-    private static final int STATE_CANCELED = 3;
 
     private String side;
     private PosSide posSide;
@@ -20,7 +16,7 @@ public class Order {
     private volatile double price;
     private volatile String algoId;
     private volatile double extraMargin;
-    private final AtomicInteger state = new AtomicInteger(STATE_LIVE);
+    private final AtomicReference<String> state = new AtomicReference<>(Constants.ORDER_STATE_LIVE);
 
     private long createTime;
     private long updateTime;
@@ -66,23 +62,13 @@ public class Order {
     }
 
     public String getState() {
-        switch (this.state.get()) {
-            case STATE_FILLED:
-                return Constants.ORDER_STATE_FILLED;
-            case STATE_CANCELED:
-                return Constants.ORDER_STATE_CANCELED;
-            default:
-                return Constants.ORDER_STATE_LIVE;
-        }
+        return state.get();
     }
 
     public void setState(String state) {
-        if (Constants.ORDER_STATE_FILLED.equals(state))
-            this.state.compareAndSet(STATE_LIVE, STATE_FILLED);
-        if (Constants.ORDER_STATE_CANCELED.equals(state))
-            if (!this.state.compareAndSet(STATE_LIVE, STATE_CANCELED))
-                if (!this.state.compareAndSet(STATE_FILLED, STATE_CANCELED))
-                    throw new IllegalStateException("illegal state, " + getState() + " change to " + state);
+        if (!this.state.compareAndSet(Constants.ORDER_STATE_LIVE, state))
+            if (!this.state.compareAndSet(Constants.ORDER_STATE_FILLED, state))
+                throw new IllegalStateException("illegal state, " + getState() + " change to " + state);
     }
 
     public double getPrice() {
@@ -123,5 +109,20 @@ public class Order {
 
     public void setUpdateTime(long updateTime) {
         this.updateTime = updateTime;
+    }
+
+    @Override
+    public String toString() {
+        return "Order{" +
+                "side='" + side + '\'' +
+                ", posSide=" + posSide +
+                ", orderType='" + orderType + '\'' +
+                ", position=" + position +
+                ", orderId='" + orderId + '\'' +
+                ", price=" + price +
+                ", algoId='" + algoId + '\'' +
+                ", extraMargin=" + extraMargin +
+                ", state=" + state.get() +
+                '}';
     }
 }

@@ -29,7 +29,6 @@ public abstract class WsJsonClient {
     private Endpoint endpoint;
     private Session session;
 
-    private final CountDownLatch latch = new CountDownLatch(1);
     private final ExecutorService executor = DefaultExecutor.executor();
     private boolean reconnect = true;
     protected Map<Object, List<MessageConsumer>> consumers = new ConcurrentHashMap<>();
@@ -78,6 +77,7 @@ public abstract class WsJsonClient {
 
     @OnMessage
     public void _onReceive(Session session, JSONObject message) {
+        logger.debug(">> {}", message.toJSONString());
         if (message.isEmpty())
             return;
 
@@ -103,7 +103,6 @@ public abstract class WsJsonClient {
     public void _onError(Session session, Throwable throwable) {
         this.onError(throwable);
         if (session != null && !session.isOpen()) {
-            this.stop();
             if (reconnect)
                 this.start();
         }
@@ -112,12 +111,9 @@ public abstract class WsJsonClient {
     @OnClose
     public void _onClose(Session session, CloseReason closeReason) {
         this.onClose(closeReason);
-        this.stop();
         if (reconnect)
             this.start();
     }
-
-    public abstract String wsUrl();
 
     public void onOpen(EndpointConfig config) {
 
@@ -175,23 +171,15 @@ public abstract class WsJsonClient {
         consumer.setClient(null);
     }
 
-    protected abstract Object openKey(JSONObject data);
-
-    protected abstract Object recvKey(JSONObject message);
-
     public void start() {
         String ws_url = wsUrl();
         try {
             WebSocketContainer container = ContainerProvider.getWebSocketContainer();
             container.connectToServer(endpoint, endpointConfig, URI.create(ws_url));
-            latch.await();
+            logger.info("ws client connect finished");
         } catch (Exception e) {
             e.printStackTrace();
         }
-    }
-
-    public void stop() {
-        latch.countDown();
     }
 
     public void shutdown() {
@@ -211,6 +199,12 @@ public abstract class WsJsonClient {
         }
         return instanceManager;
     }
+
+    public abstract String wsUrl();
+
+    protected abstract Object openKey(JSONObject data);
+
+    protected abstract Object recvKey(JSONObject message);
 
     public boolean isReconnect() {
         return reconnect;

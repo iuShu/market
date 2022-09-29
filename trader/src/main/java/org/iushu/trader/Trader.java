@@ -15,8 +15,22 @@ public class Trader {
 
     private static final Trader INSTANCE = new Trader();
 
-    private Trader() {
+    private WsJsonClient wsClient = new OkxWsJsonClient();
+    private WsJsonClient privateClient = new OkxPrivateWsJsonClient();
 
+    private Trader() {
+        MAStrategy strategy = new MAStrategy();
+        Operator operator = new Operator(strategy);
+        Authenticator authenticator = new Authenticator();
+        PosListener posListener = new PosListener();
+
+        wsClient.register(strategy);
+        wsClient.register(operator);
+
+        privateClient.register(operator);
+        privateClient.register(authenticator);
+        privateClient.register(posListener);
+        privateClient.afterConnected(() -> DefaultExecutor.executor().submit(wsClient::start));
     }
 
     public static Trader instance() {
@@ -27,26 +41,8 @@ public class Trader {
         if (running)
             throw new IllegalStateException("already in running");
 
-        MAStrategy strategy = new MAStrategy();
-        Operator operator = new Operator(strategy);
-        Authenticator authenticator = new Authenticator();
-        PosListener posListener = new PosListener();
-        AccountListener accountListener = new AccountListener();
-
-        WsJsonClient wsClient = new OkxWsJsonClient();
-        wsClient.register(strategy);
-        wsClient.register(operator);
-
-        WsJsonClient privateClient = new OkxPrivateWsJsonClient();
-        privateClient.register(operator);
-        privateClient.register(authenticator);
-        privateClient.register(posListener);
-        privateClient.register(accountListener);
-
-        privateClient.afterConnected(() -> DefaultExecutor.executor().submit(wsClient::start));
-        DefaultExecutor.executor().submit(privateClient::start);
-
         try {
+            privateClient.start();
             running = true;
             control.await();
         } catch (InterruptedException e) {
