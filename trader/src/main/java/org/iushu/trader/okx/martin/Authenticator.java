@@ -39,6 +39,7 @@ public class Authenticator implements OkxMessageConsumer {
         String ordId = order.getString("ordId");
         Integer position = order.getInteger("sz");
         String state = order.getString("state");
+        String side = order.getString("side");
         long update = order.getLong("uTime");
 
         double fillSz = order.getDoubleValue("fillSz");
@@ -50,15 +51,27 @@ public class Authenticator implements OkxMessageConsumer {
             case Constants.ORDER_STATE_LIVE:
                 logger.info("placed order {} pos={}", ordId, position);
                 Order plain = martinOrders.getOrder(position);
+                if (plain == null && Setting.SIDE_OPEN.equals(side)) {
+                    logger.warn("unknown live order {}", message.toJSONString());
+                    return;     // placed close all position or other unknown situation
+                }
+
                 martinOrders.setOrder(ordId, position);
                 plain.setOrderId(ordId);
                 plain.setCreateTime(order.getLong("cTime"));
                 plain.setUpdateTime(update);
                 break;
             case Constants.ORDER_STATE_FILLED:
+                if (Setting.SIDE_CLOSE.equals(side)) {
+                    closeAllPosition();
+                    return;
+                }
+
                 Order live = martinOrders.getOrder(ordId);
-                if (live == null)
+                if (live == null && Setting.SIDE_OPEN.equals(side)) {
+                    logger.warn("unknown filled order {}", message.toJSONString());
                     throw new IllegalStateException(ordId + " has been filled unexpected with pos=" + position);
+                }
                 martinOrders.setCurrent(live);
                 live.setState(state);
                 live.setPrice(order.getDoubleValue("fillPx"));
@@ -73,8 +86,8 @@ public class Authenticator implements OkxMessageConsumer {
             case Constants.ORDER_STATE_CANCELED:
                 logger.info("canceled order {} pos={}", ordId, position);
                 Order filled = martinOrders.getOrder(ordId);
-                if (filled == null) {
-                    logger.warn("canceled order not found");
+                if (filled == null && Setting.SIDE_OPEN.equals(side)) {
+                    logger.warn("canceled order not found, {} ", message.toJSONString());
                     return;
                 }
                 filled.setState(state);
@@ -133,6 +146,25 @@ public class Authenticator implements OkxMessageConsumer {
         } catch (Exception e) {
             logger.error("add extra margin error", e);
             this.client.shutdown();
+        } finally {
+            operating.release();
+        }
+    }
+
+    private void closeAllPosition() {
+        acquireSemaphore();
+        try {
+            JSONObject packet = PacketUtils.cancelOrdersPacket();
+            this.client.sendAsync(packet, r -> {
+                if (r.isOK())
+                    logger.info("sent cancel orders");
+                else
+                    logger.error("send cancel orders failed", r.getException());
+            });
+            MartinOrders.instance().reset();
+            logger.info("close all, reset orders");
+        } catch (Exception e) {
+            logger.error("close all position failed", e);
         } finally {
             operating.release();
         }

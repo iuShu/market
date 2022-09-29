@@ -43,7 +43,7 @@ public class MartinOrders {
 
     public void prepareOrders() {
         Order first = new Order();
-        first.setSide(SIDE_SELL);
+        first.setSide(SIDE_OPEN);
         first.setPosSide(POS_SIDE);
         first.setPosition(ORDER_START_POS);
         first.setOrderType(ORDER_TYPE_MARKET);
@@ -81,7 +81,9 @@ public class MartinOrders {
     public void setCurrent(Order order) {
         Integer idx = this.idToOrders.get(order.getOrderId());
         validateIdx(idx);
-        this.current.compareAndSet(idx - 1, idx);
+        if (!this.current.compareAndSet(idx - 1, idx))
+            throw new IllegalStateException("unexpected current order index "
+                    + this.current.get() + " when set to " + idx);
     }
 
     public Order current() {

@@ -102,17 +102,14 @@ public abstract class WsJsonClient {
     @OnError
     public void _onError(Session session, Throwable throwable) {
         this.onError(throwable);
-        if (session != null && !session.isOpen()) {
-            if (reconnect)
-                this.start();
-        }
+        if (session != null && !session.isOpen())
+            this.tryReconnect();
     }
 
     @OnClose
     public void _onClose(Session session, CloseReason closeReason) {
         this.onClose(closeReason);
-        if (reconnect)
-            this.start();
+        this.tryReconnect();
     }
 
     public void onOpen(EndpointConfig config) {
@@ -178,18 +175,28 @@ public abstract class WsJsonClient {
             container.connectToServer(endpoint, endpointConfig, URI.create(ws_url));
             logger.info("ws client connect finished");
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("connect to server failed", e);
+            shutdown();
         }
     }
 
     public void shutdown() {
         try {
-            logger.warn("close ws client manually");
+            logger.warn("shutdown ws client manually");
             this.reconnect = false;
-            this.session.close();
+            if (this.session != null && this.session.isOpen())
+                this.session.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    private void tryReconnect() {
+        if (!this.reconnect)
+            return;
+
+        logger.warn("try reconnect to " + wsUrl());
+        this.start();
     }
 
     private InstanceManager instanceManager() {

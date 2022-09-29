@@ -5,10 +5,15 @@ import org.iushu.trader.okx.OkxPrivateWsJsonClient;
 import org.iushu.trader.okx.OkxWsJsonClient;
 import org.iushu.trader.okx.martin.*;
 import org.iushu.trader.websocket.WsJsonClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 public class Trader {
+
+    private static final Logger logger = LoggerFactory.getLogger(Trader.class);
 
     private final CountDownLatch control = new CountDownLatch(1);
     private volatile boolean running = false;
@@ -22,14 +27,12 @@ public class Trader {
         MAStrategy strategy = new MAStrategy();
         Operator operator = new Operator(strategy);
         Authenticator authenticator = new Authenticator();
-        PosListener posListener = new PosListener();
 
         wsClient.register(strategy);
         wsClient.register(operator);
 
         privateClient.register(operator);
         privateClient.register(authenticator);
-        privateClient.register(posListener);
         privateClient.afterConnected(() -> DefaultExecutor.executor().submit(wsClient::start));
     }
 
@@ -55,9 +58,17 @@ public class Trader {
     public void stop() {
         if (!running)
             throw new IllegalStateException("not in running");
-        DefaultExecutor.executor().shutdownNow();
-        DefaultExecutor.scheduler().shutdownNow();
+
+        logger.warn("trader stopping");
+        try {
+            TimeUnit.SECONDS.sleep(3);
+        } catch (InterruptedException e) {
+            // ignore
+        }
+        DefaultExecutor.executor().shutdown();
+        DefaultExecutor.scheduler().shutdown();
         control.countDown();
+        logger.warn("trader stopped");
     }
 
     /**

@@ -10,7 +10,7 @@
         <!--<RandomAccessFile name="file" fileName="${filename}" immediateFlush="false" append="true">
             <PatternLayout pattern="${pattern}"/>
         </RandomAccessFile>-->
-        <RollingRandomAccessFile name="file" fileName="${filename}" filePattern="${rolling}">
+        <RollingRandomAccessFile name="file" fileName="${filename}" filePattern="${rolling}" immediateFlush="false" append="true">
             <PatternLayout pattern="${pattern}"/>
             <Policies>
                 <SizeBasedTriggeringPolicy size="1 MB"/>

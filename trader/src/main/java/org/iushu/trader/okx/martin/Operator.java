@@ -69,8 +69,10 @@ public class Operator implements OkxMessageConsumer {
 
         try {
             Order first = MartinOrders.instance().first();
-            if (first == null || first.getOrderId() != null)
-                throw new IllegalStateException("illegal martin order's situation");
+            if (first == null || first.getOrderId() != null) {
+                logger.error("unexpected first order situation {}", first);
+                return;
+            }
 
             JSONObject packet = PacketUtils.placeOrderPacket(first);
             this.privateClient.sendAsync(packet, r -> {
@@ -85,14 +87,19 @@ public class Operator implements OkxMessageConsumer {
     }
 
     private void closeByTakeProfit() {
+        if (this.prices.size() < Setting.ORDER_CLOSE_PX_THRESHOLD)
+            return;
+
         Order order = MartinOrders.instance().current();
         if (order == null || !Constants.ORDER_STATE_FILLED.equals(order.getState()))
             return;
 
         double takeProfitPrice = MartinOrders.instance().takeProfitPrice(order);
-        long count = this.prices.stream().filter(px -> order.getPosSide().isProfit(takeProfitPrice, px)).count();
-        if (count != Setting.ORDER_CLOSE_PX_THRESHOLD)
-            return;
+        logger.debug("check close {} prices {}", takeProfitPrice, this.prices);
+        for (Double price : this.prices) {
+            if (!order.getPosSide().isProfit(takeProfitPrice, price))
+                return;
+        }
 
         if (!closing.compareAndSet(false, true))
             return;
