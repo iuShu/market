@@ -36,6 +36,7 @@ public class Authenticator implements OkxMessageConsumer {
     public void consume(JSONObject message) {
         JSONArray data = message.getJSONArray("data");
         JSONObject order = data.getJSONObject(0);
+        logger.warn("confirm {}", order);
         String ordId = order.getString("ordId");
         Integer position = order.getInteger("sz");
         String state = order.getString("state");
@@ -49,10 +50,9 @@ public class Authenticator implements OkxMessageConsumer {
         MartinOrders martinOrders = MartinOrders.instance();
         switch (state) {
             case Constants.ORDER_STATE_LIVE:
-                logger.info("placed order {} pos={}", ordId, position);
                 Order plain = martinOrders.getOrder(position);
-                if (plain == null && Setting.SIDE_OPEN.equals(side)) {
-                    logger.warn("unknown live order {}", message.toJSONString());
+                if (plain == null || Setting.SIDE_OPEN.equals(side)) {
+                    logger.warn("unknown/close plain order {}", message.toJSONString());
                     return;     // placed close all position or other unknown situation
                 }
 
@@ -60,6 +60,7 @@ public class Authenticator implements OkxMessageConsumer {
                 plain.setOrderId(ordId);
                 plain.setCreateTime(order.getLong("cTime"));
                 plain.setUpdateTime(update);
+                logger.info("placed order {} pos={}", ordId, position);
                 break;
             case Constants.ORDER_STATE_FILLED:
                 if (Setting.SIDE_CLOSE.equals(side)) {
@@ -67,9 +68,10 @@ public class Authenticator implements OkxMessageConsumer {
                     return;
                 }
 
-                Order live = martinOrders.getOrder(ordId);
-                if (live == null && Setting.SIDE_OPEN.equals(side)) {
-                    logger.warn("unknown filled order {}", message.toJSONString());
+                // do not get by orderId due to the filled message could be received faster than the placed message
+                Order live = martinOrders.getOrder(position);
+                if (live == null || Setting.SIDE_OPEN.equals(side)) {
+                    logger.warn("unknown/close filled order {}", message.toJSONString());
                     throw new IllegalStateException(ordId + " has been filled unexpected with pos=" + position);
                 }
                 martinOrders.setCurrent(live);
@@ -86,7 +88,7 @@ public class Authenticator implements OkxMessageConsumer {
             case Constants.ORDER_STATE_CANCELED:
                 logger.info("canceled order {} pos={}", ordId, position);
                 Order filled = martinOrders.getOrder(ordId);
-                if (filled == null && Setting.SIDE_OPEN.equals(side)) {
+                if (filled == null || Setting.SIDE_OPEN.equals(side)) {
                     logger.warn("canceled order not found, {} ", message.toJSONString());
                     return;
                 }

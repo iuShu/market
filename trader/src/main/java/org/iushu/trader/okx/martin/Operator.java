@@ -52,9 +52,10 @@ public class Operator implements OkxMessageConsumer {
             this.prices.remove(0);
 
         Order first = MartinOrders.instance().first();
-        if (first != null && first.getOrderId() != null) {      // has been filled
-            if (placing.get()) {                                // recover
-                placing.compareAndSet(true, false);
+        logger.debug("check first={} placing={}", first, this.placing.get());
+        if (first != null && (first.getOrderId() != null || Constants.ORDER_STATE_FILLED.equals(first.getState()))) {
+            if (this.placing.get()) {
+                this.placing.compareAndSet(true, false);
                 logger.info("first order has been filled, reset state");
             }
             closeByTakeProfit();
@@ -66,7 +67,7 @@ public class Operator implements OkxMessageConsumer {
     }
 
     private void placeFirstOrder(double latestPrice) {
-        if (coolingDown() || !placing.compareAndSet(false, true))
+        if (coolingDown() || !this.placing.compareAndSet(false, true))
             return;
 
         try {
@@ -93,7 +94,7 @@ public class Operator implements OkxMessageConsumer {
             return;
 
         Order order = MartinOrders.instance().current();
-        logger.debug("check order {} of {}", order, this.prices);
+        logger.debug("check current {} at {}", order, this.prices);
         if (order == null || !Constants.ORDER_STATE_FILLED.equals(order.getState()))
             return;
 
@@ -104,7 +105,7 @@ public class Operator implements OkxMessageConsumer {
                 return;
         }
 
-        if (!closing.compareAndSet(false, true))
+        if (!this.closing.compareAndSet(false, true))
             return;
         try {
             if (MartinOrders.instance().getOrder(order.getOrderId()) != order)  // reconfirm

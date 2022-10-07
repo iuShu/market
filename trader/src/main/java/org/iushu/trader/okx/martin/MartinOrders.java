@@ -5,6 +5,7 @@ import org.iushu.trader.okx.Setting;
 import java.math.BigDecimal;
 import java.math.MathContext;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.iushu.trader.base.Constants.*;
@@ -31,9 +32,9 @@ public class MartinOrders {
         this.followRate = BigDecimal.valueOf(ORDER_FOLLOW_RATE);
         this.profitStepRate = BigDecimal.valueOf(ORDER_PROFIT_STEP_RATE);
         this.maxOrder = ORDER_MAX_ORDERS;
-        this.orders = new HashMap<>(maxOrder);
-        this.idToOrders = new HashMap<>(maxOrder);
-        this.posToOrders = new HashMap<>(maxOrder);
+        this.orders = new ConcurrentHashMap<>(maxOrder);
+        this.idToOrders = new ConcurrentHashMap<>(maxOrder);
+        this.posToOrders = new ConcurrentHashMap<>(maxOrder);
         prepareOrders();
     }
 

@@ -56,7 +56,6 @@ public class MAStrategy implements Strategy<JSONObject>, OkxMessageConsumer {
         List<JSONArray> list = candles.toList(JSONArray.class);
         Collections.reverse(list);
         this.repo.addAll(list);
-        this.repo.remove(this.repo.size() - 1);     // remove latest invalid data
         logger.info("prepared {} candle data", this.repo.size());
     }
 
@@ -92,7 +91,10 @@ public class MAStrategy implements Strategy<JSONObject>, OkxMessageConsumer {
         else if (this.timestamp == 0 && !this.repo.isEmpty()) {
             JSONArray last = this.repo.get(this.repo.size() - 1);
             Long lastTs = last.getLong(0);
-            if (ts - lastTs != CANDLE_TYPE_MILLISECONDS) {
+            if (ts == lastTs) {
+                this.repo.remove(this.repo.size() - 1);     // remove latest invalid data
+            }
+            else if (ts - lastTs != CANDLE_TYPE_MILLISECONDS) {
                 logger.warn("discard legacy data at {} before {}", lastTs, ts);
                 this.repo.clear();
             }
@@ -112,6 +114,7 @@ public class MAStrategy implements Strategy<JSONObject>, OkxMessageConsumer {
         final BigDecimal[] total = {BigDecimal.ZERO};
         subList.forEach(each -> total[0] = total[0].add(each.getBigDecimal(4)));
         double ma = total[0].divide(new BigDecimal(String.valueOf(STRATEGY_MA_TYPE)), BigDecimal.ROUND_HALF_UP).doubleValue();
+        logger.debug("strategy ma={} px={}", ma, px);
         return POS_SIDE.isLoss(ma, px);
     }
 

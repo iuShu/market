@@ -66,7 +66,7 @@ public abstract class WsJsonClient {
 
     @OnMessage
     public void _onReceive(Session session, JSONObject message) {
-        logger.debug(">> {}", message.toJSONString());
+//        logger.debug(">> {}", message.toJSONString());
         if (message.isEmpty())
             return;
 
