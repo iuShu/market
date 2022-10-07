@@ -52,9 +52,11 @@ public class Operator implements OkxMessageConsumer {
             this.prices.remove(0);
 
         Order first = MartinOrders.instance().first();
-        if (first != null && first.getOrderId() != null) {  // has been filled
-            if (placing.get())                              // recover
+        if (first != null && first.getOrderId() != null) {      // has been filled
+            if (placing.get()) {                                // recover
                 placing.compareAndSet(true, false);
+                logger.info("first order has been filled, reset state");
+            }
             closeByTakeProfit();
             return;
         }
@@ -91,11 +93,12 @@ public class Operator implements OkxMessageConsumer {
             return;
 
         Order order = MartinOrders.instance().current();
+        logger.debug("check order {} of {}", order, this.prices);
         if (order == null || !Constants.ORDER_STATE_FILLED.equals(order.getState()))
             return;
 
         double takeProfitPrice = MartinOrders.instance().takeProfitPrice(order);
-        logger.debug("check close {} prices {}", takeProfitPrice, this.prices);
+        logger.debug("check tp px {}", takeProfitPrice);
         for (Double price : this.prices) {
             if (!order.getPosSide().isProfit(takeProfitPrice, price))
                 return;

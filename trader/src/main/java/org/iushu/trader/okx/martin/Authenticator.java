@@ -133,6 +133,7 @@ public class Authenticator implements OkxMessageConsumer {
 
         acquireSemaphore();
         try {
+            logger.debug("ready to add extra margin for {}", order);
             if (order != MartinOrders.instance().getOrder(order.getOrderId()))
                 return;     // could be closed by other thread
 

@@ -10,6 +10,7 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
+import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicHeader;
 import org.apache.http.ssl.SSLContexts;
@@ -108,6 +109,7 @@ public class HttpUtils {
         httpPost.setHeaders(headers(METHOD_POST, api, body));
         httpPost.setConfig(requestConfig);
         try {
+            httpPost.setEntity(new StringEntity(body.toJSONString()));
             HttpResponse response = httpClient.execute(httpPost);
             int code = response.getStatusLine().getStatusCode();
             HttpEntity responseEntity = response.getEntity();

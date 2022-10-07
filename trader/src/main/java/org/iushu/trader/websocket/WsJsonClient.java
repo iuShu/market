@@ -33,8 +33,6 @@ public abstract class WsJsonClient {
     private boolean reconnect = true;
     protected Map<Object, List<MessageConsumer>> consumers = new ConcurrentHashMap<>();
 
-    private Supplier afterConnectTask;
-
     public WsJsonClient() {
         try {
             List<Class<? extends Decoder>> decoders = new ArrayList<>();
@@ -53,10 +51,6 @@ public abstract class WsJsonClient {
         return this.session;
     }
 
-    public void afterConnected(Supplier task) {
-        this.afterConnectTask = task;
-    }
-
     protected void heartbeat(long interval, TimeUnit timeUnit) {
         DefaultExecutor.scheduler().scheduleAtFixedRate(() -> {
             if (session != null && session.isOpen())
@@ -68,11 +62,6 @@ public abstract class WsJsonClient {
     public void _onOpen(Session session, EndpointConfig config) {
         this.session = session;
         this.onOpen(config);
-
-        if (this.afterConnectTask != null) {
-            this.afterConnectTask.get();
-            this.afterConnectTask = null;
-        }
     }
 
     @OnMessage

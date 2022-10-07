@@ -21,7 +21,7 @@ public class Trader {
     private static final Trader INSTANCE = new Trader();
 
     private WsJsonClient wsClient = new OkxWsJsonClient();
-    private WsJsonClient privateClient = new OkxPrivateWsJsonClient();
+    private OkxPrivateWsJsonClient privateClient = new OkxPrivateWsJsonClient();
 
     private Trader() {
         MAStrategy strategy = new MAStrategy();
@@ -33,7 +33,7 @@ public class Trader {
 
         privateClient.register(operator);
         privateClient.register(authenticator);
-        privateClient.afterConnected(() -> DefaultExecutor.executor().submit(wsClient::start));
+        privateClient.afterLogin((c) -> DefaultExecutor.executor().submit(wsClient::start));
     }
 
     public static Trader instance() {
@@ -45,8 +45,8 @@ public class Trader {
             throw new IllegalStateException("already in running");
 
         try {
-            privateClient.start();
             running = true;
+            privateClient.start();
             control.await();
         } catch (InterruptedException e) {
             e.printStackTrace();
@@ -67,7 +67,8 @@ public class Trader {
         }
         DefaultExecutor.executor().shutdown();
         DefaultExecutor.scheduler().shutdown();
-        control.countDown();
+        if (control.getCount() > 0)
+            control.countDown();
         logger.warn("trader stopped");
     }
 

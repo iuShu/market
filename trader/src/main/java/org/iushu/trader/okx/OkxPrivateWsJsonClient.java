@@ -4,7 +4,6 @@ import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import org.iushu.trader.SyncControl;
 import org.iushu.trader.SyncController;
-import org.iushu.trader.base.Signature;
 import org.iushu.trader.websocket.MessageConsumer;
 import org.iushu.trader.websocket.WsJsonClient;
 import org.slf4j.Logger;
@@ -16,6 +15,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 public class OkxPrivateWsJsonClient extends WsJsonClient implements SyncControl {
 
@@ -30,8 +30,14 @@ public class OkxPrivateWsJsonClient extends WsJsonClient implements SyncControl 
     public static final String KEY_ARG = "arg";
     public static final String KEY_DATA = "data";
 
+    private Consumer<WsJsonClient> afterLoginTask;
+
     public OkxPrivateWsJsonClient() {
         SyncController.instance().register(this);
+    }
+
+    public void afterLogin(Consumer<WsJsonClient> task) {
+        this.afterLoginTask = task;
     }
 
     @Override
@@ -47,7 +53,7 @@ public class OkxPrivateWsJsonClient extends WsJsonClient implements SyncControl 
     @Override
     public Object recvKey(JSONObject data) {
         if (!data.containsKey(KEY_ARG)) {
-            logger.warn(data.toJSONString());
+            logger.debug(data.toJSONString());
             return -1;
         }
         JSONObject arg = data.getJSONObject(KEY_ARG);
@@ -80,6 +86,7 @@ public class OkxPrivateWsJsonClient extends WsJsonClient implements SyncControl 
                     logger.error("send subscribe message failed");
                     shutdown();
                 }
+                this.applyTask();
                 break;
             case "subscribe":
                 JSONObject arg = message.getJSONObject("arg");
@@ -135,4 +142,12 @@ public class OkxPrivateWsJsonClient extends WsJsonClient implements SyncControl 
     public void syncShutdown() {
         super.shutdown();
     }
+
+    private void applyTask() {
+        if (this.afterLoginTask != null) {
+            this.afterLoginTask.accept(this);
+            this.afterLoginTask = null;
+        }
+    }
+
 }
