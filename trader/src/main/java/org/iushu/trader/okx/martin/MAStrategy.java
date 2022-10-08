@@ -86,7 +86,7 @@ public class MAStrategy implements Strategy<JSONObject>, OkxMessageConsumer {
             return;
         }
         else if (this.timestamp != 0 && ts != this.timestamp) {
-            logger.error("current {} but recv {}", this.timestamp, ts);
+            logger.warn("current {} but recv {}", this.timestamp, ts);
         }
         else if (this.timestamp == 0 && !this.repo.isEmpty()) {
             JSONArray last = this.repo.get(this.repo.size() - 1);

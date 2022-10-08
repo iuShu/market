@@ -82,7 +82,7 @@ public abstract class WsJsonClient {
             try {
                 c.consume(message);
             } catch (Exception e) {
-                logger.error("{} consume error", c.getClass().getName(), e);
+                logger.error("{} consume error at {}", c.getClass().getName(), message, e);
                 this.shutdown();
             }
         }));

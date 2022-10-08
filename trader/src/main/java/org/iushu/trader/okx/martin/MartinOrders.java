@@ -1,5 +1,6 @@
 package org.iushu.trader.okx.martin;
 
+import org.iushu.trader.base.PosSide;
 import org.iushu.trader.okx.Setting;
 
 import java.math.BigDecimal;
@@ -13,14 +14,13 @@ import static org.iushu.trader.okx.Setting.*;
 
 public class MartinOrders {
 
-    private BigDecimal followRate;
-    private BigDecimal profitStepRate;
-    private int maxOrder;
-    private AtomicInteger current = new AtomicInteger(0);
-    private Map<Integer, Order> orders;
-//    private Map<Long, Integer> midToOrders;
-    private Map<String, Integer> idToOrders;
-    private Map<Integer, Integer> posToOrders;
+    private final BigDecimal followRate;
+    private final BigDecimal profitStepRate;
+    private final int maxOrder;
+    private final AtomicInteger batch = new AtomicInteger(1);
+    private final AtomicInteger current = new AtomicInteger(0);
+    private final Map<Integer, Order> orders;
+    private final Map<Integer, Integer> posToOrders;
 
     private final BigDecimal ONE_THOUSAND = new BigDecimal("1000");
     private final BigDecimal ORDER_LEVER = new BigDecimal(Setting.ORDER_LEVER);
@@ -33,7 +33,6 @@ public class MartinOrders {
         this.profitStepRate = BigDecimal.valueOf(ORDER_PROFIT_STEP_RATE);
         this.maxOrder = ORDER_MAX_ORDERS;
         this.orders = new ConcurrentHashMap<>(maxOrder);
-        this.idToOrders = new ConcurrentHashMap<>(maxOrder);
         this.posToOrders = new ConcurrentHashMap<>(maxOrder);
         prepareOrders();
     }
@@ -61,26 +60,17 @@ public class MartinOrders {
         return orders.get(1);
     }
 
-    public void setOrder(String orderId, int position) {
-        Integer idx = this.posToOrders.get(position);
-        validateIdx(idx);
-        this.idToOrders.put(orderId, idx);
-    }
-
     public Order getOrder(int position) {
-        return this.orders.get(this.posToOrders.get(position));
-    }
-
-    public Order getOrder(String orderId) {
-        return this.orders.get(this.idToOrders.get(orderId));
+        Integer idx = this.posToOrders.get(position);
+        return idx == null ? null : this.orders.get(idx);
     }
 
     public Collection<Order> allOrders() {
-        return this.orders.values();
+        return new ArrayList<>(this.orders.values());
     }
 
     public void setCurrent(Order order) {
-        Integer idx = this.idToOrders.get(order.getOrderId());
+        Integer idx = this.posToOrders.get(order.getPosition());
         validateIdx(idx);
         if (!this.current.compareAndSet(idx - 1, idx))
             throw new IllegalStateException("unexpected current order index "
@@ -111,8 +101,11 @@ public class MartinOrders {
     }
 
     public double takeProfitPrice(Order order) {
-        Integer idx = this.idToOrders.get(order.getOrderId());
-        return this.followRate.add(this.profitStepRate.multiply(new BigDecimal(String.valueOf(idx - 1)))).doubleValue();
+        Integer idx = this.posToOrders.get(order.getPosition());
+        BigDecimal px = BigDecimal.valueOf(order.getPrice());
+        BigDecimal tpRate = this.followRate.add(this.profitStepRate.multiply(new BigDecimal(String.valueOf(idx - 1))));
+        tpRate = order.getPosSide() == PosSide.LongSide ? BigDecimal.ONE.add(tpRate) : BigDecimal.ONE.subtract(tpRate);
+        return px.multiply(tpRate).doubleValue();
     }
 
     private double nextOrderPrice(Order order) {
@@ -121,7 +114,7 @@ public class MartinOrders {
     }
 
     public double extraMarginBalance(Order order) {
-        Integer idx = this.idToOrders.get(order.getOrderId());
+        Integer idx = this.posToOrders.get(order.getPosition());
         BigDecimal value = new BigDecimal(order.getPosition()).divide(ONE_THOUSAND, DEFAULT_MATH_CONTEXT)
                 .multiply(BigDecimal.valueOf(order.getPrice())).divide(ORDER_LEVER, DEFAULT_MATH_CONTEXT);
         BigDecimal offset = new BigDecimal(ORDER_MAX_ORDERS - idx + 1);
@@ -138,7 +131,6 @@ public class MartinOrders {
     public void reset() {
         this.current.set(0);
         this.orders.clear();
-        this.idToOrders.clear();
         this.posToOrders.clear();
         prepareOrders();
     }

@@ -36,7 +36,6 @@ public class Authenticator implements OkxMessageConsumer {
     public void consume(JSONObject message) {
         JSONArray data = message.getJSONArray("data");
         JSONObject order = data.getJSONObject(0);
-        logger.warn("confirm {}", order);
         String ordId = order.getString("ordId");
         Integer position = order.getInteger("sz");
         String state = order.getString("state");
@@ -51,12 +50,13 @@ public class Authenticator implements OkxMessageConsumer {
         switch (state) {
             case Constants.ORDER_STATE_LIVE:
                 Order plain = martinOrders.getOrder(position);
-                if (plain == null || Setting.SIDE_OPEN.equals(side)) {
+                if (plain == null) {
                     logger.warn("unknown/close plain order {}", message.toJSONString());
                     return;     // placed close all position or other unknown situation
                 }
 
-                martinOrders.setOrder(ordId, position);
+                if (plain.getOrderId() != null)     // position partial filled
+                    return;
                 plain.setOrderId(ordId);
                 plain.setCreateTime(order.getLong("cTime"));
                 plain.setUpdateTime(update);
@@ -64,13 +64,13 @@ public class Authenticator implements OkxMessageConsumer {
                 break;
             case Constants.ORDER_STATE_FILLED:
                 if (Setting.SIDE_CLOSE.equals(side)) {
+                    logger.warn("received manual close order");
                     closeAllPosition();
                     return;
                 }
 
-                // do not get by orderId due to the filled message could be received faster than the placed message
                 Order live = martinOrders.getOrder(position);
-                if (live == null || Setting.SIDE_OPEN.equals(side)) {
+                if (live == null) {
                     logger.warn("unknown/close filled order {}", message.toJSONString());
                     throw new IllegalStateException(ordId + " has been filled unexpected with pos=" + position);
                 }
@@ -87,7 +87,7 @@ public class Authenticator implements OkxMessageConsumer {
                 break;
             case Constants.ORDER_STATE_CANCELED:
                 logger.info("canceled order {} pos={}", ordId, position);
-                Order filled = martinOrders.getOrder(ordId);
+                Order filled = martinOrders.getOrder(position);
                 if (filled == null || Setting.SIDE_OPEN.equals(side)) {
                     logger.warn("canceled order not found, {} ", message.toJSONString());
                     return;
@@ -135,8 +135,8 @@ public class Authenticator implements OkxMessageConsumer {
 
         acquireSemaphore();
         try {
-            logger.debug("ready to add extra margin for {}", order);
-            if (order != MartinOrders.instance().getOrder(order.getOrderId()))
+            logger.debug("ready to add extra {} margin for {}", extra, order);
+            if (order != MartinOrders.instance().getOrder(order.getPosition()))
                 return;     // could be closed by other thread
 
             if (OkxHttpUtils.addExtraMargin(order.getPosSide(), extra)) {
