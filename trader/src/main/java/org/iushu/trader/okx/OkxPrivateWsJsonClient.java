@@ -52,10 +52,8 @@ public class OkxPrivateWsJsonClient extends WsJsonClient implements SyncControl 
 
     @Override
     public Object recvKey(JSONObject data) {
-        if (!data.containsKey(KEY_ARG)) {
-            logger.debug(data.toJSONString());
+        if (!data.containsKey(KEY_ARG))
             return -1;
-        }
         JSONObject arg = data.getJSONObject(KEY_ARG);
         return arg.getString(KEY_CHANNEL).hashCode();
     }

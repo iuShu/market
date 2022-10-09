@@ -26,6 +26,7 @@ public class Operator implements OkxMessageConsumer {
 
     private final AtomicBoolean placing = new AtomicBoolean(false);
     private final AtomicBoolean closing = new AtomicBoolean(false);
+    private volatile String messageId = "";
     private volatile long coolingDown = 0L;
     private volatile long displayInterval = 0L;
     private volatile int orderBatch;
@@ -49,6 +50,11 @@ public class Operator implements OkxMessageConsumer {
 
     @Override
     public void consume(JSONObject message) {
+        if (message.containsKey("op")) {
+            checkFirstOrderPlacing(message);
+            return;
+        }
+
         JSONArray data = message.getJSONArray(OkxWsJsonClient.KEY_DATA);
         if (data == null || data.isEmpty())
             return;
@@ -91,6 +97,7 @@ public class Operator implements OkxMessageConsumer {
             }
 
             JSONObject packet = PacketUtils.placeOrderPacket(first);
+            this.messageId = packet.getString("id");
             this.privateClient.sendAsync(packet, r -> {
                 if (r.isOK())
                     logger.info("sent [{}]first order at {} pos={}", this.orderBatch, latestPrice, first.getPosition());
@@ -145,6 +152,17 @@ public class Operator implements OkxMessageConsumer {
         }
     }
 
+    private void checkFirstOrderPlacing(JSONObject message) {
+        if (message.getIntValue("code") == 0 || !this.messageId.equals(message.getString("id")))
+            return;
+
+        logger.warn("place first order failed by {}", message.toJSONString());
+        if (this.placing.get()) {
+            logger.info("reset and try place first order again");
+            this.placing.compareAndSet(true, false);
+        }
+    }
+
     private void debugPriceCheck(double takeProfitPrice) {
         long now = System.currentTimeMillis();
         if (this.displayInterval < now) {
@@ -159,7 +177,7 @@ public class Operator implements OkxMessageConsumer {
     }
 
     private boolean isCoolingDown() {
-        return this.coolingDown < System.currentTimeMillis();
+        return this.coolingDown > 0 && this.coolingDown < System.currentTimeMillis();
     }
 
     public static String timestampFormat(long timestamp) {

@@ -74,7 +74,15 @@ public abstract class WsJsonClient {
             return;
 
         Object key = Objects.requireNonNull(recvKey(message));
-        List<MessageConsumer> consumers = this.consumers.get(key);
+        List<MessageConsumer> consumers;
+        if (key instanceof Integer && ((int) key) == -1) {
+            consumers = new ArrayList<>();
+            this.consumers.values().forEach(consumers::addAll);
+        }
+        else {
+            consumers = this.consumers.get(key);
+        }
+
         if (consumers == null || consumers.isEmpty())
             return;
 

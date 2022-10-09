@@ -27,6 +27,7 @@ public class MAStrategy implements Strategy<JSONObject>, OkxMessageConsumer {
     private final List<JSONArray> repo = new CopyOnWriteArrayList<>();
     private static final int MAX_REPO_ELEMENTS = STRATEGY_MA_TYPE * 2;
 
+    private volatile long displayInterval = 0L;
     private final Lock acceptLock = new ReentrantLock();
     private volatile long timestamp = 0L;
     private JSONArray current = null;
@@ -42,6 +43,8 @@ public class MAStrategy implements Strategy<JSONObject>, OkxMessageConsumer {
 
     @Override
     public void consume(JSONObject message) {
+        if (message.containsKey("op"))
+            return;
         this.feed(message);
     }
 
@@ -114,7 +117,16 @@ public class MAStrategy implements Strategy<JSONObject>, OkxMessageConsumer {
         final BigDecimal[] total = {BigDecimal.ZERO};
         subList.forEach(each -> total[0] = total[0].add(each.getBigDecimal(4)));
         double ma = total[0].divide(new BigDecimal(String.valueOf(STRATEGY_MA_TYPE)), BigDecimal.ROUND_HALF_UP).doubleValue();
+        debugStrategyCheck(ma, px);
         return POS_SIDE.isLoss(ma, px);
+    }
+
+    private void debugStrategyCheck(double ma, double px) {
+        long now = System.currentTimeMillis();
+        if (this.displayInterval < now) {
+            logger.debug("strategy ma={} px={}", ma, px);
+            this.displayInterval = now + Setting.CANDLE_TYPE_MILLISECONDS;
+        }
     }
 
 }

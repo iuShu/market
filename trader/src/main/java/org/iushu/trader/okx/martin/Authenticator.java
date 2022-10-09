@@ -21,6 +21,7 @@ public class Authenticator implements OkxMessageConsumer {
 
     private WsJsonClient client;
     private final Semaphore operating = new Semaphore(1);
+    private volatile String messageId = "";
 
     @Override
     public JSONObject privateChannel() {
@@ -34,6 +35,11 @@ public class Authenticator implements OkxMessageConsumer {
 
     @Override
     public void consume(JSONObject message) {
+        if (message.containsKey("op")) {
+            checkAllNextOrdersPlacing(message);
+            return;
+        }
+
         JSONArray data = message.getJSONArray("data");
         JSONObject order = data.getJSONObject(0);
         String ordId = order.getString("ordId");
@@ -80,8 +86,10 @@ public class Authenticator implements OkxMessageConsumer {
                 live.setUpdateTime(update);
                 logger.info("filled order {} pos={} at {}", ordId, position, live.getPrice());
 
-                if (position == Setting.ORDER_START_POS)
+                if (position == Setting.ORDER_START_POS) {
+                    MartinOrders.instance().calcOrdersPrice();
                     placeAllNext();
+                }
                 // TODO add algo order (deprecated)
                 addExtraMargin(live);
                 break;
@@ -101,10 +109,10 @@ public class Authenticator implements OkxMessageConsumer {
     private void placeAllNext() {
         acquireSemaphore();
         try {
-            MartinOrders.instance().calcOrdersPrice();
             Collection<Order> orders = MartinOrders.instance().allOrders();
             orders.removeIf(o -> o.getPosition() == Setting.ORDER_START_POS);
             JSONObject packet = PacketUtils.placeOrdersPacket(orders);
+            this.messageId = packet.getString("id");
             this.client.sendAsync(packet, r -> {
                 if (r.isOK()) {
                     logger.info("sent {} next orders", orders.size());
@@ -171,6 +179,14 @@ public class Authenticator implements OkxMessageConsumer {
         } finally {
             operating.release();
         }
+    }
+
+    private void checkAllNextOrdersPlacing(JSONObject message) {
+        if (message.getIntValue("code") == 0 || !this.messageId.equals(message.getString("id")))
+            return;
+
+        logger.warn("place next orders failed by {}", message.toJSONString());
+        placeAllNext();
     }
 
     private void acquireSemaphore() {
