@@ -114,7 +114,6 @@ public class MAStrategy implements Strategy<JSONObject>, OkxMessageConsumer {
         final BigDecimal[] total = {BigDecimal.ZERO};
         subList.forEach(each -> total[0] = total[0].add(each.getBigDecimal(4)));
         double ma = total[0].divide(new BigDecimal(String.valueOf(STRATEGY_MA_TYPE)), BigDecimal.ROUND_HALF_UP).doubleValue();
-        logger.debug("strategy ma={} px={}", ma, px);
         return POS_SIDE.isLoss(ma, px);
     }
 

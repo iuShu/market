@@ -1,5 +1,6 @@
 package org.iushu.trader.okx.martin;
 
+import org.iushu.trader.base.Constants;
 import org.iushu.trader.base.PosSide;
 import org.iushu.trader.okx.Setting;
 
@@ -7,6 +8,7 @@ import java.math.BigDecimal;
 import java.math.MathContext;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.iushu.trader.base.Constants.*;
@@ -21,6 +23,7 @@ public class MartinOrders {
     private final AtomicInteger current = new AtomicInteger(0);
     private final Map<Integer, Order> orders;
     private final Map<Integer, Integer> posToOrders;
+    private final AtomicBoolean resetting = new AtomicBoolean(false);
 
     private final BigDecimal ONE_THOUSAND = new BigDecimal("1000");
     private final BigDecimal ORDER_LEVER = new BigDecimal(Setting.ORDER_LEVER);
@@ -81,6 +84,10 @@ public class MartinOrders {
         return orders.get(current.get());
     }
 
+    public int getBatch() {
+        return this.batch.get();
+    }
+
     private Order createNextOrder(Order order) {
         Order next = new Order();
         next.setSide(SIDE_SELL);
@@ -89,6 +96,11 @@ public class MartinOrders {
         next.setPosition(order.getPosition() * 2);
         next.setOrderType(ORDER_TYPE_LIMIT);
         return next;
+    }
+
+    public boolean validOrder(Order order) {
+        return order != null &&
+                (order.getOrderId() != null || Constants.ORDER_STATE_FILLED.equals(order.getState()));
     }
 
     public void calcOrdersPrice() {
@@ -129,10 +141,14 @@ public class MartinOrders {
     }
 
     public void reset() {
+        if (!this.resetting.compareAndSet(false, true))
+            return;
+        this.batch.incrementAndGet();
         this.current.set(0);
         this.orders.clear();
         this.posToOrders.clear();
         prepareOrders();
+        this.resetting.compareAndSet(true, false);
     }
 
     public void printOrders() {

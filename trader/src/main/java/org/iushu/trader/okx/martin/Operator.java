@@ -28,11 +28,13 @@ public class Operator implements OkxMessageConsumer {
     private final AtomicBoolean closing = new AtomicBoolean(false);
     private volatile long coolingDown = 0L;
     private volatile long displayInterval = 0L;
+    private volatile int orderBatch;
 
     private final List<Double> prices = new CopyOnWriteArrayList<>();
 
     public Operator(Strategy<JSONObject> strategy) {
         this.strategy = strategy;
+        this.orderBatch = MartinOrders.instance().getBatch();
     }
 
     @Override
@@ -58,7 +60,7 @@ public class Operator implements OkxMessageConsumer {
             this.prices.remove(0);
 
         Order first = MartinOrders.instance().first();
-        if (first != null && (first.getOrderId() != null || Constants.ORDER_STATE_FILLED.equals(first.getState()))) {
+        if (MartinOrders.instance().validOrder(first)) {
             if (this.placing.get()) {
                 this.placing.compareAndSet(true, false);
                 logger.info("first order has been filled, reset state");
@@ -67,25 +69,31 @@ public class Operator implements OkxMessageConsumer {
             return;
         }
 
+        int nextBatch = MartinOrders.instance().getBatch();
+        if (this.orderBatch != nextBatch) {
+            this.orderBatch = nextBatch;
+            coolingDown();
+        }
+
         if (strategy.satisfy(ticker))
             placeFirstOrder(price);
     }
 
     private void placeFirstOrder(double latestPrice) {
-        if (coolingDown() || !this.placing.compareAndSet(false, true))
+        if (isCoolingDown() || !this.placing.compareAndSet(false, true))
             return;
 
         try {
             Order first = MartinOrders.instance().first();
             if (first == null || first.getOrderId() != null) {
-                logger.error("unexpected first order situation {}", first);
+                logger.error("unexpected first order state {}", first);
                 return;
             }
 
             JSONObject packet = PacketUtils.placeOrderPacket(first);
             this.privateClient.sendAsync(packet, r -> {
                 if (r.isOK())
-                    logger.info("sent first order at {} pos={}", latestPrice, first.getPosition());
+                    logger.info("sent [{}]first order at {} pos={}", this.orderBatch, latestPrice, first.getPosition());
                 else
                     logger.error("send first order failed", r.getException());
             });
@@ -103,11 +111,7 @@ public class Operator implements OkxMessageConsumer {
             return;
 
         double takeProfitPrice = MartinOrders.instance().takeProfitPrice(order);
-        long now = System.currentTimeMillis();
-        if (this.displayInterval < now) {
-            logger.debug("check tp px {} at {}", takeProfitPrice, this.prices);
-            this.displayInterval = now + Setting.CANDLE_TYPE_MILLISECONDS;
-        }
+        debugPriceCheck(takeProfitPrice);
         for (Double price : this.prices) {
             if (!order.getPosSide().isProfit(takeProfitPrice, price))
                 return;
@@ -133,9 +137,7 @@ public class Operator implements OkxMessageConsumer {
             }
 
             MartinOrders.instance().reset();
-            this.coolingDown = System.currentTimeMillis() + Setting.COOLING_DOWN_MILLISECONDS;
             logger.info("*** close all position at {} ***", this.prices.get(this.prices.size() - 1));
-            logger.info("cooling down till to {}", timestampFormat(this.coolingDown));
         } catch (Exception e) {
             logger.error("close by take profit error", e);
         } finally {
@@ -143,7 +145,20 @@ public class Operator implements OkxMessageConsumer {
         }
     }
 
-    private boolean coolingDown() {
+    private void debugPriceCheck(double takeProfitPrice) {
+        long now = System.currentTimeMillis();
+        if (this.displayInterval < now) {
+            logger.debug("check tp px {} at {}", takeProfitPrice, this.prices);
+            this.displayInterval = now + Setting.CANDLE_TYPE_MILLISECONDS;
+        }
+    }
+
+    private void coolingDown() {
+        this.coolingDown = System.currentTimeMillis() + Setting.COOLING_DOWN_MILLISECONDS;
+        logger.info("cooling down till to {}", timestampFormat(this.coolingDown));
+    }
+
+    private boolean isCoolingDown() {
         return this.coolingDown < System.currentTimeMillis();
     }
 

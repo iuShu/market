@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.websocket.CloseReason;
 import javax.websocket.EndpointConfig;
+import java.util.concurrent.TimeUnit;
 
 public class OkxWsJsonClient extends WsJsonClient implements SyncControl {
 
@@ -57,6 +58,7 @@ public class OkxWsJsonClient extends WsJsonClient implements SyncControl {
             logger.error("send subscribe message failed");
             shutdown();
         }
+        heartbeat(5, TimeUnit.SECONDS);
     }
 
     @Override
