@@ -44,7 +44,7 @@ public interface Setting {
     OkxChannel CHANNEL_POSITIONS = new OkxChannel(WSS_PRV_CHANNEL_POSITIONS, INST_ID, INST_TYPE);
     OkxChannel CHANNEL_ACCOUNT = new OkxChannel(WSS_PRV_CHANNEL_ACCOUNT);
 
-    int COOLING_DOWN_MILLISECONDS = 30000;
+    int COOLING_DOWN_MILLISECONDS = 5000;
     int STRATEGY_MA_TYPE = 10;
     PosSide POS_SIDE = PosSide.ShortSide;
     String SIDE_OPEN = Constants.SIDE_SELL;

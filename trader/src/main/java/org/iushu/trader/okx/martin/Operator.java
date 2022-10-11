@@ -86,7 +86,7 @@ public class Operator implements OkxMessageConsumer {
     }
 
     private void placeFirstOrder(double latestPrice) {
-        if (isCoolingDown() || !this.placing.compareAndSet(false, true))
+        if (!isCoolingDown() || !this.placing.compareAndSet(false, true))
             return;
 
         try {
