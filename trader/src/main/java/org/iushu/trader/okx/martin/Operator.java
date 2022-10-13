@@ -86,7 +86,7 @@ public class Operator implements OkxMessageConsumer {
     }
 
     private void placeFirstOrder(double latestPrice) {
-        if (!isCoolingDown() || !this.placing.compareAndSet(false, true))
+        if (isCoolingDown() || !this.placing.compareAndSet(false, true))
             return;
 
         try {
@@ -177,7 +177,7 @@ public class Operator implements OkxMessageConsumer {
     }
 
     private boolean isCoolingDown() {
-        return this.coolingDown > 0 && this.coolingDown < System.currentTimeMillis();
+        return this.coolingDown > 0 && this.coolingDown > System.currentTimeMillis();
     }
 
     public static String timestampFormat(long timestamp) {

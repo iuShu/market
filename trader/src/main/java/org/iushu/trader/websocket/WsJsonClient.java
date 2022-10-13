@@ -173,7 +173,7 @@ public abstract class WsJsonClient {
             logger.info("ws client connect finished");
         } catch (Exception e) {
             logger.error("connect to server failed", e);
-            shutdown();
+            this.tryReconnect();
         }
     }
 

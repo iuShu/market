@@ -116,7 +116,7 @@ public class HttpUtils {
             if (code / 100 == 2)
                 return JSONObject.parseObject(EntityUtils.toString(responseEntity));
             String resp = responseEntity == null ? "unknown" : EntityUtils.toString(responseEntity);
-            logger.error("http post failed with {} {}", code, resp);
+            logger.error("http post failed at {} with {} {}", api, code, resp);
         } catch (IOException e) {
             logger.error("http post error", e);
         }
