@@ -151,6 +151,37 @@ public class MartinOrders {
         this.resetting.compareAndSet(true, false);
     }
 
+    public double orderCost(Order order) {
+        return BigDecimal.valueOf(order.getPrice())
+                .divide(BigDecimal.valueOf(Setting.ORDER_LEVER), DEFAULT_MATH_CONTEXT)
+                .multiply(BigDecimal.valueOf(order.getPosition()).divide(ONE_THOUSAND, DEFAULT_MATH_CONTEXT)).doubleValue();
+    }
+
+    public double totalCost() {
+        BigDecimal[] cost = new BigDecimal[]{BigDecimal.ZERO};
+        this.allOrders().forEach(order -> cost[0] = cost[0].add(BigDecimal.valueOf(orderCost(order))));
+        return cost[0].doubleValue();
+    }
+
+    public double openFee(Order order) {
+        BigDecimal actualPos = BigDecimal.valueOf(order.getPosition()).divide(ONE_THOUSAND, DEFAULT_MATH_CONTEXT);
+        return BigDecimal.valueOf(order.getPrice()).multiply(actualPos).multiply(BigDecimal.valueOf(ORDER_FEE_RATE)).doubleValue();
+    }
+
+    public double totalFee() {
+        BigDecimal[] fee = new BigDecimal[]{BigDecimal.ZERO};
+        Order[] last = new Order[1];
+        int[] totalPos = new int[1];
+        this.allOrders().forEach(order -> {
+            fee[0] = fee[0].add(BigDecimal.valueOf(this.openFee(order)));
+            if (last[0] == null || last[0].getPosition() < order.getPosition())
+                last[0] = order;
+            totalPos[0] += order.getPosition();
+        });
+        BigDecimal actualPos = BigDecimal.valueOf(totalPos[0]).divide(ONE_THOUSAND, DEFAULT_MATH_CONTEXT);
+        return BigDecimal.valueOf(nextOrderPrice(last[0])).multiply(actualPos).multiply(BigDecimal.valueOf(ORDER_FEE_RATE)).doubleValue();
+    }
+
     public void printOrders() {
         this.orders.forEach((k, v) -> System.out.println(k + " " + v));
     }
@@ -159,7 +190,13 @@ public class MartinOrders {
         MartinOrders martinOrders = MartinOrders.instance();
         martinOrders.first().setPrice(20000);
         martinOrders.calcOrdersPrice();
-        martinOrders.allOrders().forEach(o -> System.out.println(o.getPosition() + " ~ " + o.getPrice()));
+        martinOrders.allOrders().forEach(o -> System.out.println(o.getPosition() + " ~ " + o.getPrice()
+                + " | " + martinOrders.orderCost(o)
+                + " + " + martinOrders.openFee(o)));
+        double totalCost = martinOrders.totalCost();
+        System.out.println(totalCost);
+        double totalFee = martinOrders.totalFee();
+        System.out.println(totalFee);
     }
 
 }

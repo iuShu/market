@@ -50,14 +50,14 @@ public class Authenticator implements OkxMessageConsumer {
 
         double fillSz = order.getDoubleValue("fillSz");
         if (fillSz > 0 && fillSz < position)
-            logger.warn("order {} not fulfilled {} {}", ordId, position, fillSz);
+            logger.debug("order {} not fulfilled {}", position, fillSz);
 
         MartinOrders martinOrders = MartinOrders.instance();
         switch (state) {
             case Constants.ORDER_STATE_LIVE:
                 Order plain = martinOrders.getOrder(position);
                 if (plain == null) {
-                    logger.warn("unknown/close plain order {}", message.toJSONString());
+//                    logger.warn("unknown/close plain order {}", message.toJSONString());
                     return;     // placed close all position or other unknown situation
                 }
 
@@ -70,7 +70,7 @@ public class Authenticator implements OkxMessageConsumer {
                 break;
             case Constants.ORDER_STATE_FILLED:
                 if (Setting.SIDE_CLOSE.equals(side)) {
-                    logger.warn("received manual close order");
+                    logger.warn("received close order");
                     closeAllPosition();
                     return;
                 }
@@ -91,13 +91,14 @@ public class Authenticator implements OkxMessageConsumer {
                     placeAllNext();
                 }
                 // TODO add algo order (deprecated)
-                addExtraMargin(live);
+                // TODO what if not adding extra margin balance ?
+//                addExtraMargin(live);
                 break;
             case Constants.ORDER_STATE_CANCELED:
                 logger.info("canceled order {} pos={}", ordId, position);
                 Order filled = martinOrders.getOrder(position);
                 if (filled == null || Setting.SIDE_OPEN.equals(side)) {
-                    logger.warn("canceled order not found, {} ", message.toJSONString());
+//                    logger.warn("canceled order not found, {} ", message.toJSONString());
                     return;
                 }
                 filled.setState(state);

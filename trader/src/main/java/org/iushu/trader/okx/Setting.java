@@ -53,6 +53,7 @@ public interface Setting {
     int ORDER_START_POS = 10;
     double ORDER_FOLLOW_RATE = 0.004;
     double ORDER_PROFIT_STEP_RATE = 0.0002;
+    double ORDER_FEE_RATE = 0.0005;
     int ORDER_MAX_ORDERS = 6;
     int ORDER_CLOSE_PX_THRESHOLD = 5;
 }
