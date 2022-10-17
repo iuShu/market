@@ -44,7 +44,7 @@ public class MartinOrders {
         return INSTANCE;
     }
 
-    public void prepareOrders() {
+    private void prepareOrders() {
         Order first = new Order();
         first.setSide(SIDE_OPEN);
         first.setPosSide(POS_SIDE);
@@ -120,7 +120,7 @@ public class MartinOrders {
         return px.multiply(tpRate).doubleValue();
     }
 
-    private double nextOrderPrice(Order order) {
+    public double nextOrderPrice(Order order) {
         BigDecimal price = BigDecimal.valueOf(order.getPrice());
         return price.multiply(BigDecimal.ONE.add(this.followRate), DEFAULT_MATH_CONTEXT).doubleValue();
     }

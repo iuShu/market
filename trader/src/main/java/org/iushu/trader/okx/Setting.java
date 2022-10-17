@@ -9,15 +9,15 @@ import java.math.BigDecimal;
 
 public interface Setting {
 
-    Boolean TEST = "true".equals(Configuration.getString("test"));
+    String ENV = Configuration.getString("env");
 
-    String APIKEY = Configuration.getString("api.key." + ExchangeType.OKX.name);
-    String SECRETKEY = Configuration.getString("api.secret." + ExchangeType.OKX.name);
-    String PASSPHRASE = Configuration.getString("api.passphrase." + ExchangeType.OKX.name);
+    String APIKEY = Configuration.getString("api.key." + ExchangeType.OKX.name + "." + ENV);
+    String SECRETKEY = Configuration.getString("api.secret." + ExchangeType.OKX.name + "." + ENV);
+    String PASSPHRASE = Configuration.getString("api.passphrase." + ExchangeType.OKX.name + "." + ENV);
 
-    String API_URL = Configuration.getString("api.url." + ExchangeType.OKX.name);
-    String WSS_PUBLIC_URL = Configuration.getString("ws.public.url." + ExchangeType.OKX.name);
-    String WSS_PRIVATE_URL = Configuration.getString("ws.private.url." + ExchangeType.OKX.name);
+    String API_URL = Configuration.getString("api.url." + ExchangeType.OKX.name + "." + ENV);
+    String WSS_PUBLIC_URL = Configuration.getString("ws.public.url." + ExchangeType.OKX.name + "." + ENV);
+    String WSS_PRIVATE_URL = Configuration.getString("ws.private.url." + ExchangeType.OKX.name + "." + ENV);
 
     String WSS_PUB_CHANNEL_TICKERS = "tickers";
     String WSS_PUB_CHANNEL_CANDLE = "candle";
@@ -56,4 +56,5 @@ public interface Setting {
     double ORDER_FEE_RATE = 0.0005;
     int ORDER_MAX_ORDERS = 6;
     int ORDER_CLOSE_PX_THRESHOLD = 5;
+
 }

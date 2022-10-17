@@ -73,7 +73,7 @@ public class HttpUtils {
         headers.add(new BasicHeader(HEADER_TIMESTAMP, utc));
         headers.add(new BasicHeader(HEADER_PASSPHRASE, Setting.PASSPHRASE));
         headers.add(new BasicHeader(CONTENT_TYPE, APPLICATION_JSON.getMimeType()));
-        if (Setting.TEST)
+        if ("test".equals(Setting.ENV))
             headers.add(new BasicHeader("x-simulated-trading", "1"));
         return headers.toArray(new Header[0]);
     }
