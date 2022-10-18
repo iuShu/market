@@ -85,7 +85,7 @@ public class MAStrategy implements Strategy<JSONObject>, OkxMessageConsumer {
             }
             if (this.repo.size() >= MAX_REPO_ELEMENTS)
                 this.repo.remove(0);
-            logger.info("accept candle data {} {}", this.repo.size(), this.current);
+//            logger.info("accept candle data {} {}", this.repo.size(), this.current);
             return;
         }
         else if (this.timestamp != 0 && ts != this.timestamp) {
@@ -117,7 +117,7 @@ public class MAStrategy implements Strategy<JSONObject>, OkxMessageConsumer {
         final BigDecimal[] total = {BigDecimal.ZERO};
         subList.forEach(each -> total[0] = total[0].add(each.getBigDecimal(4)));
         double ma = total[0].divide(new BigDecimal(String.valueOf(STRATEGY_MA_TYPE)), BigDecimal.ROUND_HALF_UP).doubleValue();
-        debugStrategyCheck(ma, px);
+//        debugStrategyCheck(ma, px);
         return POS_SIDE.isLoss(ma, px);
     }
 

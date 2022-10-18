@@ -99,8 +99,8 @@ public class RealOperatorTest implements OkxMessageConsumer {
             logger.info("placed [{}]first order at {} pos={}", this.orderBatch, latestPrice, first.getPosition());
             filledOrder(first, latestPrice);
             MartinOrders.instance().calcOrdersPrice();
-            MartinOrders.instance().allOrders().forEach(order ->
-                    logger.info("placed [{}]follow order with pos={}", this.orderBatch, order.getPosition()));
+            MartinOrders.instance().allOrders().stream().filter(order -> order.getPosition() != first.getPosition())
+                .forEach(order -> logger.info("placed [{}]follow order with pos={}", this.orderBatch, order.getPosition()));
         } catch (Exception e) {
             logger.error("place first order error", e);
         }
@@ -115,7 +115,7 @@ public class RealOperatorTest implements OkxMessageConsumer {
             return;
 
         double takeProfitPrice = MartinOrders.instance().takeProfitPrice(order);
-        debugPriceCheck(takeProfitPrice);
+//        debugPriceCheck(takeProfitPrice);
         for (Double price : this.prices) {
             if (!order.getPosSide().isProfit(takeProfitPrice, price))
                 return;
@@ -132,7 +132,7 @@ public class RealOperatorTest implements OkxMessageConsumer {
             logger.info("sent close orders");
 
             MartinOrders.instance().reset();
-            logger.info("*** close all position at {} ***", this.prices.get(this.prices.size() - 1));
+            logger.warn("*** close all position at {} ***", this.prices.get(this.prices.size() - 1));
         } catch (Exception e) {
             logger.error("close by take profit error", e);
         } finally {
