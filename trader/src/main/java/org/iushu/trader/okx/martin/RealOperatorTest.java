@@ -3,6 +3,7 @@ package org.iushu.trader.okx.martin;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import org.iushu.trader.base.Constants;
+import org.iushu.trader.base.NotifyUtil;
 import org.iushu.trader.okx.*;
 import org.iushu.trader.websocket.WsJsonClient;
 import org.slf4j.Logger;
@@ -133,6 +134,8 @@ public class RealOperatorTest implements OkxMessageConsumer {
 
             MartinOrders.instance().reset();
             logger.warn("*** close all position at {} ***", this.prices.get(this.prices.size() - 1));
+            NotifyUtil.windowTipsAndVoice("Order Close",
+                    "Order " + this.orderBatch + " closed by take profit, position " + order.getPosition());
         } catch (Exception e) {
             logger.error("close by take profit error", e);
         } finally {
@@ -169,7 +172,10 @@ public class RealOperatorTest implements OkxMessageConsumer {
         MartinOrders.instance().setCurrent(filled);
         filled.setState(Constants.ORDER_STATE_FILLED);
         filled.setPrice(filledPrice);
-        logger.info("[{}]order has been filled at {} with pos={}", this.orderBatch, filledPrice, filled.getPosition());
+        logger.info("[{}]order has been filled at {} with pos={}, tp={}",
+                this.orderBatch, filledPrice, filled.getPosition(), MartinOrders.instance().takeProfitPrice(filled));
+        NotifyUtil.windowTipsAndVoice("Order Filled",
+                "Order filled, price " + filledPrice + ", position " + filled.getPosition());
     }
 
     private void debugPriceCheck(double takeProfitPrice) {
