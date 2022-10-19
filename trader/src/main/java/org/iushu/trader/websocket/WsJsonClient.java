@@ -4,7 +4,6 @@ import com.alibaba.fastjson2.JSONObject;
 import org.apache.tomcat.InstanceManager;
 import org.apache.tomcat.InstanceManagerBindings;
 import org.apache.tomcat.websocket.pojo.PojoEndpointClient;
-import org.iushu.trader.Trader;
 import org.iushu.trader.base.DefaultExecutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,16 +12,21 @@ import javax.websocket.*;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.channels.ClosedChannelException;
-import java.util.*;
-import java.util.concurrent.*;
-import java.util.function.Function;
-import java.util.function.Supplier;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import static java.util.Collections.singletonList;
 
 public abstract class WsJsonClient {
 
     private static final Logger logger = LoggerFactory.getLogger(WsJsonClient.class);
+    private static final int RECONNECT_INTERVAL = 2;
 
     private InstanceManager instanceManager;
     private ClientEndpointConfig endpointConfig;
@@ -192,8 +196,8 @@ public abstract class WsJsonClient {
         if (!this.reconnect)
             return;
 
-        logger.warn("try reconnect to " + wsUrl());
-        this.start();
+        logger.warn("{}s later try reconnect to {}", RECONNECT_INTERVAL, wsUrl());
+        DefaultExecutor.scheduler().schedule(this::start, RECONNECT_INTERVAL, TimeUnit.SECONDS);
     }
 
     private InstanceManager instanceManager() {

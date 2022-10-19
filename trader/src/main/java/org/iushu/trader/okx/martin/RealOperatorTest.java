@@ -129,8 +129,8 @@ public class RealOperatorTest implements OkxMessageConsumer {
             if (MartinOrders.instance().getOrder(order.getPosition()) != order)  // reconfirm
                 return;     // could be closed by other thread
 
-            logger.info("sent cancel orders");
             logger.info("sent close orders");
+            logger.info("sent cancel orders");
 
             MartinOrders.instance().reset();
             logger.warn("*** close all position at {} ***", this.prices.get(this.prices.size() - 1));

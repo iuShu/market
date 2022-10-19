@@ -3,6 +3,7 @@ package org.iushu.trader.okx.martin;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import org.iushu.trader.base.Constants;
+import org.iushu.trader.base.NotifyUtil;
 import org.iushu.trader.okx.OkxHttpUtils;
 import org.iushu.trader.okx.OkxMessageConsumer;
 import org.iushu.trader.okx.PacketUtils;
@@ -93,6 +94,9 @@ public class Authenticator implements OkxMessageConsumer {
                 // TODO add algo order (deprecated)
                 // TODO what if not adding extra margin balance ?
 //                addExtraMargin(live);
+
+                NotifyUtil.windowTipsAndVoice("Order Filled",
+                        "Order filled, price " + live.getPrice() + ", position " + position);
                 break;
             case Constants.ORDER_STATE_CANCELED:
                 logger.info("canceled order {} pos={}", ordId, position);

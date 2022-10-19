@@ -3,6 +3,7 @@ package org.iushu.trader.okx.martin;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import org.iushu.trader.base.Constants;
+import org.iushu.trader.base.NotifyUtil;
 import org.iushu.trader.okx.*;
 import org.iushu.trader.websocket.WsJsonClient;
 import org.slf4j.Logger;
@@ -145,6 +146,8 @@ public class Operator implements OkxMessageConsumer {
 
             MartinOrders.instance().reset();
             logger.info("*** close all position at {} ***", this.prices.get(this.prices.size() - 1));
+            NotifyUtil.windowTipsAndVoice("Order Close",
+                    "Order " + this.orderBatch + " closed by take profit, position " + order.getPosition());
         } catch (Exception e) {
             logger.error("close by take profit error", e);
         } finally {
