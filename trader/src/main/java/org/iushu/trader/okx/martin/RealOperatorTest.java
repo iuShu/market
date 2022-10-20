@@ -169,6 +169,9 @@ public class RealOperatorTest implements OkxMessageConsumer {
     }
 
     private void filledOrder(Order filled, double filledPrice) {
+        if (filled.getState().equals(Constants.ORDER_STATE_FILLED))
+            return;
+
         MartinOrders.instance().setCurrent(filled);
         filled.setState(Constants.ORDER_STATE_FILLED);
         filled.setPrice(filledPrice);
