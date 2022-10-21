@@ -132,22 +132,12 @@ public class Operator implements OkxMessageConsumer {
             if (MartinOrders.instance().getOrder(order.getPosition()) != order)  // reconfirm
                 return;     // could be closed by other thread
 
-            JSONObject packet = PacketUtils.cancelOrdersPacket();
-            this.privateClient.sendAsync(packet, r -> {
-                if (r.isOK())
-                    logger.info("sent cancel orders");
-                else
-                    logger.error("send cancel orders failed", r.getException());
-            });
-            if (!OkxHttpUtils.closePosition(order.getPosSide())) {
+            if (OkxHttpUtils.closePosition(order.getPosSide()))
+                logger.info("close all position at {}", this.prices.get(this.prices.size() - 1));
+            else {
                 logger.error("close all position failed");
-                return;
+                NotifyUtil.windowTips("Order Close", "close all position orders failed");
             }
-
-            MartinOrders.instance().reset();
-            logger.info("*** close all position at {} ***", this.prices.get(this.prices.size() - 1));
-            NotifyUtil.windowTipsAndVoice("Order Close",
-                    "Order " + this.orderBatch + " closed by take profit, position " + order.getPosition());
         } catch (Exception e) {
             logger.error("close by take profit error", e);
         } finally {

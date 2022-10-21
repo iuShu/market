@@ -14,7 +14,6 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Collection;
 import java.util.concurrent.Semaphore;
-import java.util.stream.Collectors;
 
 public class Authenticator implements OkxMessageConsumer {
 
@@ -36,10 +35,7 @@ public class Authenticator implements OkxMessageConsumer {
 
     @Override
     public void consume(JSONObject message) {
-        if (message.containsKey("op")) {
-            checkAllNextOrdersPlacing(message);
-            return;
-        }
+        checkOperationResult(message);
 
         JSONArray data = message.getJSONArray("data");
         JSONObject order = data.getJSONObject(0);
@@ -72,7 +68,7 @@ public class Authenticator implements OkxMessageConsumer {
             case Constants.ORDER_STATE_FILLED:
                 if (Setting.SIDE_CLOSE.equals(side)) {
                     logger.warn("received close order");
-                    closeAllPosition();
+                    cancelAllPendingOrders();
                     return;
                 }
 
@@ -167,31 +163,51 @@ public class Authenticator implements OkxMessageConsumer {
         }
     }
 
-    private void closeAllPosition() {
+    private void cancelAllPendingOrders() {
         acquireSemaphore();
         try {
             JSONObject packet = PacketUtils.cancelOrdersPacket();
+            this.messageId = packet.getString("id");
             this.client.sendAsync(packet, r -> {
                 if (r.isOK())
                     logger.info("sent cancel orders");
-                else
+                else {
                     logger.error("send cancel orders failed", r.getException());
+                    NotifyUtil.windowTips("Order Close", "sent cancel orders failed by " + r.getException().getMessage());
+                }
             });
-            MartinOrders.instance().reset();
-            logger.info("close all, reset orders");
         } catch (Exception e) {
-            logger.error("close all position failed", e);
+            logger.error("send all position failed", e);
         } finally {
             operating.release();
         }
     }
 
-    private void checkAllNextOrdersPlacing(JSONObject message) {
-        if (message.getIntValue("code") == 0 || !this.messageId.equals(message.getString("id")))
+    private void checkOperationResult(JSONObject message) {
+        String op = message.getString("op");
+        if (op == null || op.isEmpty())
             return;
 
-        logger.warn("place next orders failed by {}", message.toJSONString());
-        placeAllNext();
+        String id = message.getString("id");
+        if (id == null || !id.equals(this.messageId))
+            return;
+
+        Integer code = message.getInteger("code");
+        if (code == 0) {
+            logger.info("{} operation success", op);
+            if (!op.equals("batch-cancel-orders"))
+                return;
+
+            MartinOrders.instance().reset();
+            NotifyUtil.windowTipsAndVoice("Order Close", "Order batch " + MartinOrders.instance().getBatch() + " closed.");
+        }
+        else {
+            logger.error("{} operation failed by {}", op, message);
+            if (op.equals("batch-orders"))
+                placeAllNext();
+            else
+                cancelAllPendingOrders();
+        }
     }
 
     private void acquireSemaphore() {
