@@ -60,9 +60,7 @@ public class PacketUtils {
         return data;
     }
 
-    public static JSONObject cancelOrdersPacket() {
-        Collection<Order> orders = MartinOrders.instance().allOrders();
-        List<Order> lives = orders.stream().filter(o -> Constants.ORDER_STATE_LIVE.equals(o.getState())).collect(Collectors.toList());
+    public static JSONObject cancelOrdersPacket(List<Order> lives) {
         JSONObject packet = JSONObject.of("id", Long.toString(identifier()), "op", "batch-cancel-orders");
         JSONArray args = new JSONArray();
         lives.forEach(live -> args.add(JSONObject.of("instId", Setting.INST_ID, "ordId", live.getOrderId())));

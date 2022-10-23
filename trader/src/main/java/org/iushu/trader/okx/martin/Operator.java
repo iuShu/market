@@ -70,7 +70,7 @@ public class Operator implements OkxMessageConsumer {
         if (MartinOrders.instance().validOrder(first)) {
             if (this.placing.get()) {
                 this.placing.compareAndSet(true, false);
-                logger.info("first order has been filled, reset state");
+                logger.info("first order has been filled, reset placing");
             }
             closeByTakeProfit();
             return;
@@ -79,6 +79,10 @@ public class Operator implements OkxMessageConsumer {
         int nextBatch = MartinOrders.instance().getBatch();
         if (this.orderBatch != nextBatch) {
             this.orderBatch = nextBatch;
+            if (this.closing.get()) {
+                this.closing.compareAndSet(true, false);
+                logger.info("all position has been closed, reset closing");
+            }
             coolingDown();
         }
 
@@ -129,8 +133,10 @@ public class Operator implements OkxMessageConsumer {
             return;
         try {
             logger.info("close by take profit {} of {}", takeProfitPrice, order.getPrice());
-            if (MartinOrders.instance().getOrder(order.getPosition()) != order)  // reconfirm
+            if (MartinOrders.instance().getOrder(order.getPosition()) != order) {   // reconfirm
+                this.closing.compareAndSet(true, false);    // reset
                 return;     // could be closed by other thread
+            }
 
             if (OkxHttpUtils.closePosition(order.getPosSide())) {
                 logger.info("close all position at {}", this.prices.get(this.prices.size() - 1));
@@ -139,11 +145,10 @@ public class Operator implements OkxMessageConsumer {
             else {
                 logger.error("close all position failed");
                 NotifyUtil.windowTips("Order Close", "close all position orders failed");
+                this.closing.compareAndSet(true, false);    // reset
             }
         } catch (Exception e) {
             logger.error("close by take profit error", e);
-        } finally {
-            closing.compareAndSet(true, false);
         }
     }
 

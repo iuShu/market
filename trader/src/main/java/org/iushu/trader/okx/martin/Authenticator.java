@@ -13,7 +13,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 public class Authenticator implements OkxMessageConsumer {
 
@@ -22,6 +25,7 @@ public class Authenticator implements OkxMessageConsumer {
     private WsJsonClient client;
     private final Semaphore operating = new Semaphore(1);
     private volatile String messageId = "";
+    private volatile AtomicInteger failedTimes = new AtomicInteger(0);
 
     @Override
     public JSONObject privateChannel() {
@@ -90,12 +94,7 @@ public class Authenticator implements OkxMessageConsumer {
                     MartinOrders.instance().calcOrdersPrice();
                     placeAllNext();
                 }
-                // TODO add algo order (deprecated)
-                // TODO what if not adding extra margin balance ?
-//                addExtraMargin(live);
-
-                NotifyUtil.windowTipsAndVoice("Order Filled",
-                        "Order filled, price " + live.getPrice() + ", position " + position);
+                NotifyUtil.windowTipsAndVoice("Order Filled", "Order filled, price " + live.getPrice() + ", position " + position);
                 break;
             case Constants.ORDER_STATE_CANCELED:
                 logger.info("canceled order {} pos={}", ordId, position);
@@ -169,7 +168,14 @@ public class Authenticator implements OkxMessageConsumer {
     private void cancelAllPendingOrders() {
         acquireSemaphore();
         try {
-            JSONObject packet = PacketUtils.cancelOrdersPacket();
+            Collection<Order> orders = MartinOrders.instance().allOrders();
+            List<Order> lives = orders.stream().filter(o -> Constants.ORDER_STATE_LIVE.equals(o.getState())).collect(Collectors.toList());
+            if (lives.isEmpty()) {
+                logger.warn("all orders[{}] has been filled", MartinOrders.instance().getBatch());
+                return;
+            }
+
+            JSONObject packet = PacketUtils.cancelOrdersPacket(lives);
             this.messageId = packet.getString("id");
             this.client.sendAsync(packet, r -> {
                 if (r.isOK())
@@ -194,6 +200,7 @@ public class Authenticator implements OkxMessageConsumer {
 
         Integer code = message.getInteger("code");
         if (code != null && code == 0) {
+            this.failedTimes.set(0);
             logger.info("{} operation success", op);
             if (!op.equals("batch-cancel-orders"))
                 return;
@@ -203,6 +210,12 @@ public class Authenticator implements OkxMessageConsumer {
         }
         else {
             logger.error("{} operation failed by {}", op, message);
+            if (this.failedTimes.getAndIncrement() >= Setting.OPERATION_MAX_FAILURE_TIMES) {
+                logger.error("operation failed times reached threshold, shutdown program");
+                this.client.shutdown();
+                return;
+            }
+
             if (op.equals("batch-cancel-orders"))
                 cancelAllPendingOrders();
             else
