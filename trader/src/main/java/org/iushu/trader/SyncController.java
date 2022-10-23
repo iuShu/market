@@ -22,7 +22,7 @@ public class SyncController {
     public void shutdown() {
         syncControls.forEach(SyncControl::syncShutdown);
         Trader.instance().stop();
-        RealTraderTest.instance().stop();
+//        RealTraderTest.instance().stop();
     }
 
 }
