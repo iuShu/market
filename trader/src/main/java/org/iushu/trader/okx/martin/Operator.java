@@ -119,7 +119,7 @@ public class Operator implements OkxMessageConsumer {
             return;
 
         double takeProfitPrice = MartinOrders.instance().takeProfitPrice(order);
-        debugPriceCheck(takeProfitPrice);
+//        debugPriceCheck(takeProfitPrice);
         for (Double price : this.prices) {
             if (!order.getPosSide().isProfit(takeProfitPrice, price))
                 return;
@@ -132,8 +132,10 @@ public class Operator implements OkxMessageConsumer {
             if (MartinOrders.instance().getOrder(order.getPosition()) != order)  // reconfirm
                 return;     // could be closed by other thread
 
-            if (OkxHttpUtils.closePosition(order.getPosSide()))
+            if (OkxHttpUtils.closePosition(order.getPosSide())) {
                 logger.info("close all position at {}", this.prices.get(this.prices.size() - 1));
+                NotifyUtil.windowTips("Order Close", "close all position orders success");
+            }
             else {
                 logger.error("close all position failed");
                 NotifyUtil.windowTips("Order Close", "close all position orders failed");

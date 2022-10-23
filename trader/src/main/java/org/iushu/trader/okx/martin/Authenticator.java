@@ -193,7 +193,7 @@ public class Authenticator implements OkxMessageConsumer {
             return;
 
         Integer code = message.getInteger("code");
-        if (code == 0) {
+        if (code != null && code == 0) {
             logger.info("{} operation success", op);
             if (!op.equals("batch-cancel-orders"))
                 return;
@@ -203,10 +203,10 @@ public class Authenticator implements OkxMessageConsumer {
         }
         else {
             logger.error("{} operation failed by {}", op, message);
-            if (op.equals("batch-orders"))
-                placeAllNext();
-            else
+            if (op.equals("batch-cancel-orders"))
                 cancelAllPendingOrders();
+            else
+                placeAllNext();
         }
     }
 
