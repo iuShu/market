@@ -35,7 +35,10 @@ public class Authenticator implements OkxMessageConsumer {
 
     @Override
     public void consume(JSONObject message) {
-        checkOperationResult(message);
+        if (message.containsKey("op")) {
+            checkOperationResult(message);
+            return;
+        }
 
         JSONArray data = message.getJSONArray("data");
         JSONObject order = data.getJSONObject(0);
@@ -185,9 +188,6 @@ public class Authenticator implements OkxMessageConsumer {
 
     private void checkOperationResult(JSONObject message) {
         String op = message.getString("op");
-        if (op == null || op.isEmpty())
-            return;
-
         String id = message.getString("id");
         if (id == null || !id.equals(this.messageId))
             return;
