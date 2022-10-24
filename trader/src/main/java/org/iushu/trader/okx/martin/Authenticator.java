@@ -172,6 +172,7 @@ public class Authenticator implements OkxMessageConsumer {
             List<Order> lives = orders.stream().filter(o -> Constants.ORDER_STATE_LIVE.equals(o.getState())).collect(Collectors.toList());
             if (lives.isEmpty()) {
                 logger.warn("all orders[{}] has been filled", MartinOrders.instance().getBatch());
+                resetBatch();
                 return;
             }
 
@@ -202,11 +203,8 @@ public class Authenticator implements OkxMessageConsumer {
         if (code != null && code == 0) {
             this.failedTimes.set(0);
             logger.info("{} operation success", op);
-            if (!op.equals("batch-cancel-orders"))
-                return;
-
-            MartinOrders.instance().reset();
-            NotifyUtil.windowTipsAndVoice("Order Close", "Order batch " + MartinOrders.instance().getBatch() + " closed.");
+            if (op.equals("batch-cancel-orders"))
+                resetBatch();
         }
         else {
             logger.error("{} operation failed by {}", op, message);
@@ -221,6 +219,12 @@ public class Authenticator implements OkxMessageConsumer {
             else
                 placeAllNext();
         }
+    }
+
+    private void resetBatch() {
+        MartinOrders.instance().reset();
+        logger.info("reset batch {}", MartinOrders.instance().getBatch());
+        NotifyUtil.windowTipsAndVoice("Order Close", "Order batch " + MartinOrders.instance().getBatch() + " closed.");
     }
 
     private void acquireSemaphore() {
