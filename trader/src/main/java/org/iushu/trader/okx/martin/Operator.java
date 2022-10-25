@@ -16,6 +16,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class Operator implements OkxMessageConsumer {
 
@@ -28,6 +29,7 @@ public class Operator implements OkxMessageConsumer {
     private final AtomicBoolean placing = new AtomicBoolean(false);
     private final AtomicBoolean closing = new AtomicBoolean(false);
     private volatile String messageId = "";
+    private final AtomicInteger failedTimes = new AtomicInteger(0);
     private volatile long coolingDown = 0L;
     private volatile long displayInterval = 0L;
     private volatile int orderBatch;
@@ -153,10 +155,24 @@ public class Operator implements OkxMessageConsumer {
     }
 
     private void checkFirstOrderPlacing(JSONObject message) {
-        if (message.getIntValue("code") == 0 || !this.messageId.equals(message.getString("id")))
+        String op = message.getString("op");
+        String id = message.getString("id");
+        if (!this.messageId.equals(id) || !"order".equals(op))
             return;
 
+        Integer code = message.getInteger("code");
+        if (code != null && code == 0) {
+            this.failedTimes.set(0);
+            logger.info("placed order operation success");
+            return;
+        }
+
         logger.warn("place first order failed by {}", message.toJSONString());
+        if (this.failedTimes.getAndIncrement() >= Setting.OPERATION_MAX_FAILURE_TIMES) {
+            logger.error("placing first order failed times reached threshold, shutdown program");
+            this.privateClient.shutdown();
+            return;
+        }
         if (this.placing.get()) {
             logger.info("reset and try place first order again");
             this.placing.compareAndSet(true, false);

@@ -25,7 +25,7 @@ public class Authenticator implements OkxMessageConsumer {
     private WsJsonClient client;
     private final Semaphore operating = new Semaphore(1);
     private volatile String messageId = "";
-    private volatile AtomicInteger failedTimes = new AtomicInteger(0);
+    private final AtomicInteger failedTimes = new AtomicInteger(0);
 
     @Override
     public JSONObject privateChannel() {
@@ -196,7 +196,9 @@ public class Authenticator implements OkxMessageConsumer {
     private void checkOperationResult(JSONObject message) {
         String op = message.getString("op");
         String id = message.getString("id");
-        if (id == null || !id.equals(this.messageId))
+        if (!this.messageId.equals(id))
+            return;
+        if (!"batch-cancel-orders".equals(op) && !"batch-orders".equals(op))
             return;
 
         Integer code = message.getInteger("code");
@@ -209,7 +211,7 @@ public class Authenticator implements OkxMessageConsumer {
         else {
             logger.error("{} operation failed by {}", op, message);
             if (this.failedTimes.getAndIncrement() >= Setting.OPERATION_MAX_FAILURE_TIMES) {
-                logger.error("operation failed times reached threshold, shutdown program");
+                logger.error("{} failed times reached threshold, shutdown program", op);
                 this.client.shutdown();
                 return;
             }

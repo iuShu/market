@@ -75,9 +75,11 @@ public class MartinOrders {
     public void setCurrent(Order order) {
         Integer idx = this.posToOrders.get(order.getPosition());
         validateIdx(idx);
-        if (!this.current.compareAndSet(idx - 1, idx))
-            throw new IllegalStateException("unexpected current order index "
-                    + this.current.get() + " when set to " + idx);
+        while (true) {
+            int curIdx = this.current.get();
+            if (curIdx >= idx || this.current.compareAndSet(curIdx, idx))
+                break;
+        }
     }
 
     public Order current() {
