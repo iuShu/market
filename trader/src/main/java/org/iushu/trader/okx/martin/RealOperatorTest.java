@@ -101,7 +101,7 @@ public class RealOperatorTest implements OkxMessageConsumer {
             filledOrder(first, latestPrice);
             MartinOrders.instance().calcOrdersPrice();
             MartinOrders.instance().allOrders().stream().filter(order -> order.getPosition() != first.getPosition())
-                .forEach(order -> logger.info("placed [{}]follow order with pos={}", this.orderBatch, order.getPosition()));
+                .forEach(order -> logger.info("placed [{}]follow order with {}, {}", this.orderBatch, order.getPosition(), order.getPrice()));
         } catch (Exception e) {
             logger.error("place first order error", e);
         }
@@ -163,7 +163,7 @@ public class RealOperatorTest implements OkxMessageConsumer {
                 filledOrder(order, price);
             else {
                 MartinOrders.instance().reset();
-                logger.warn("Martin[{}] FAILED at px={} with last={}", this.orderBatch, price, current.getPrice());
+                logger.warn("Martin[{}] FAILED at px={} with last={}, {}", this.orderBatch, price, current.getPosition(), current.getPrice());
             }
         }
     }
@@ -173,6 +173,7 @@ public class RealOperatorTest implements OkxMessageConsumer {
             return;
 
         MartinOrders.instance().setCurrent(filled);
+        filled.setOrderId(Long.toString(System.currentTimeMillis()));
         filled.setState(Constants.ORDER_STATE_FILLED);
         filled.setPrice(filledPrice);
         logger.info("[{}]order has been filled at {} with pos={}, tp={}",
