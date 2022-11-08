@@ -15,7 +15,7 @@ public class Order {
     private volatile String orderId;
     private volatile double price;
     private volatile String algoId;
-    private volatile double extraMargin;
+    private volatile double extraMargin;    // deprecated
     private final AtomicReference<String> state = new AtomicReference<>(Constants.ORDER_STATE_LIVE);
 
     private long createTime;
