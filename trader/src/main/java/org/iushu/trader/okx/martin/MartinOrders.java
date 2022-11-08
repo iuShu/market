@@ -117,7 +117,8 @@ public class MartinOrders {
     public double takeProfitPrice(Order order) {
         Integer idx = this.posToOrders.get(order.getPosition());
         BigDecimal px = BigDecimal.valueOf(order.getPrice());
-        BigDecimal tpRate = this.followRate.add(this.profitStepRate.multiply(new BigDecimal(String.valueOf(idx - 1))));
+//        BigDecimal tpRate = this.followRate.add(this.profitStepRate.multiply(new BigDecimal(String.valueOf(idx - 1))));
+        BigDecimal tpRate = this.followRate;
         tpRate = order.getPosSide() == PosSide.LongSide ? BigDecimal.ONE.add(tpRate) : BigDecimal.ONE.subtract(tpRate);
         return px.multiply(tpRate).doubleValue();
     }
