@@ -23,6 +23,7 @@ public class RealOperatorTest implements OkxMessageConsumer {
     private static final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private final Strategy<JSONObject> strategy;
+    private WsJsonClient client;
     private WsJsonClient privateClient;
 
     private final AtomicBoolean placing = new AtomicBoolean(false);
@@ -41,6 +42,11 @@ public class RealOperatorTest implements OkxMessageConsumer {
     @Override
     public JSONObject publicChannel() {
         return Setting.CHANNEL_TICKERS;
+    }
+
+    @Override
+    public void setClient(WsJsonClient client) {
+        this.client = client;
     }
 
     @Override
@@ -165,6 +171,7 @@ public class RealOperatorTest implements OkxMessageConsumer {
             else {
                 MartinOrders.instance().reset();
                 logger.warn("Martin[{}] FAILED at px={} with last={}, {}", this.orderBatch, price, current.getPosition(), current.getPrice());
+                this.client.shutdown();
             }
         }
     }

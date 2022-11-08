@@ -124,12 +124,8 @@ public class MartinOrders {
     }
 
     public double nextOrderPrice(Order order) {
-//        BigDecimal price = BigDecimal.valueOf(order.getPrice());
-//        return price.multiply(BigDecimal.ONE.add(this.followRate), DEFAULT_MATH_CONTEXT).doubleValue();
-        BigDecimal nums = new BigDecimal(String.valueOf(this.posToOrders.get(order.getPosition())));
-        BigDecimal price = BigDecimal.valueOf(first().getPrice());
-        BigDecimal followRates = nums.multiply(this.followRate);
-        BigDecimal rate = order.getPosSide() == PosSide.LongSide ? BigDecimal.ONE.subtract(followRates) : BigDecimal.ONE.add(followRates);
+        BigDecimal price = BigDecimal.valueOf(order.getPrice());
+        BigDecimal rate = order.getPosSide() == PosSide.LongSide ? BigDecimal.ONE.subtract(this.followRate) : BigDecimal.ONE.add(this.followRate);
         return price.multiply(rate, DEFAULT_MATH_CONTEXT).doubleValue();
     }
 
@@ -202,8 +198,8 @@ public class MartinOrders {
         MartinOrders martinOrders = MartinOrders.instance();
         martinOrders.first().setPrice(20000);
         martinOrders.calcOrdersPrice();
-        martinOrders.allOrders().forEach(x -> System.out.println(x.getPosition() + " " + x.getPrice()
-                + " " + martinOrders.nextOrderPrice(x) + " " + martinOrders.takeProfitPrice(x)));
+        martinOrders.allOrders().forEach(x -> System.out.println(x.getPosition() + " " + x.getPrice() + " "
+                + martinOrders.nextOrderPrice(x) + " " + martinOrders.takeProfitPrice(x)));
     }
 
 }
