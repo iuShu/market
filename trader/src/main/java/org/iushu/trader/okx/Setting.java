@@ -56,7 +56,7 @@ public interface Setting {
     double ORDER_FOLLOW_RATE = 0.005;
     double ORDER_PROFIT_STEP_RATE = 0.0002;     // deprecated
     double ORDER_FEE_RATE = 0.0005;
-    int ORDER_MAX_ORDERS = 6;
+    int ORDER_MAX_ORDERS = 5;
     int ORDER_CLOSE_PX_THRESHOLD = 2;
     int OPERATION_MAX_FAILURE_TIMES = 5;
 
