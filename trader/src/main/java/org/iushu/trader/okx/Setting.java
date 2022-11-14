@@ -46,6 +46,8 @@ public interface Setting {
 
     int COOLING_DOWN_MILLISECONDS = 10000;
     int STRATEGY_MA_TYPE = 10;
+    int STRATEGY_EMA_TYPE = 12;
+//    int STRATEGY_EMA_TYPE = 144;
     PosSide POS_SIDE = PosSide.ShortSide;
     String SIDE_OPEN = Constants.SIDE_SELL;
     String SIDE_CLOSE = Constants.SIDE_BUY;

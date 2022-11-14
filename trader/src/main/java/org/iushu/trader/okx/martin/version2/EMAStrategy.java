@@ -1,15 +1,17 @@
-package org.iushu.trader.okx.martin;
+package org.iushu.trader.okx.martin.version2;
 
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
-import org.iushu.trader.base.Constants;
+import org.iushu.trader.base.PosSide;
 import org.iushu.trader.okx.OkxHttpUtils;
 import org.iushu.trader.okx.OkxMessageConsumer;
 import org.iushu.trader.okx.Setting;
+import org.iushu.trader.okx.martin.Strategy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -20,20 +22,21 @@ import java.util.concurrent.locks.ReentrantLock;
 import static org.iushu.trader.okx.OkxWsJsonClient.KEY_DATA;
 import static org.iushu.trader.okx.Setting.*;
 
-public class MAStrategy implements Strategy<JSONObject>, OkxMessageConsumer {
+public class EMAStrategy implements Strategy<JSONObject>, OkxMessageConsumer {
 
-    private static final Logger logger = LoggerFactory.getLogger(MAStrategy.class);
+    private static final Logger logger = LoggerFactory.getLogger(EMAStrategy.class);
 
     private final List<JSONArray> repo = new CopyOnWriteArrayList<>();
-    private static final int MAX_REPO_ELEMENTS = STRATEGY_MA_TYPE * 2;
+    private static final int MAX_REPO_ELEMENTS = 200;
 
+    private volatile double ema = 0.0;
+    private JSONArray current = null;
     private volatile long displayInterval = 0L;
     private final Lock acceptLock = new ReentrantLock();
     private volatile long timestamp = 0L;
-    private JSONArray current = null;
 
-    public MAStrategy() {
-        this.prepare();
+    public EMAStrategy() {
+//        this.prepare();
     }
 
     @Override
@@ -50,15 +53,16 @@ public class MAStrategy implements Strategy<JSONObject>, OkxMessageConsumer {
 
     @Override
     public void prepare() {
-        JSONArray candles = OkxHttpUtils.getCandleHistory(CANDLE_TYPE, STRATEGY_MA_TYPE + 1);
+        JSONArray candles = OkxHttpUtils.getCandleHistory(CANDLE_TYPE, MAX_REPO_ELEMENTS);
         if (candles.isEmpty()) {
-            logger.warn("prepare error, system exit.");
+            logger.error("prepare error, system exit.");
             System.exit(1);
         }
 
         List<JSONArray> list = candles.toList(JSONArray.class);
         Collections.reverse(list);
         this.repo.addAll(list);
+        calcAndSetEMA();
         logger.info("prepared {} candle data", this.repo.size());
     }
 
@@ -80,6 +84,7 @@ public class MAStrategy implements Strategy<JSONObject>, OkxMessageConsumer {
                 this.repo.add(this.current);
                 this.timestamp = ts;
                 this.current = array;
+                this.ema = calcAndSetEMAByPrevious(array.getDouble(4));
             } finally {
                 acceptLock.unlock();
             }
@@ -108,17 +113,49 @@ public class MAStrategy implements Strategy<JSONObject>, OkxMessageConsumer {
 
     @Override
     public boolean satisfy(JSONObject message) {
-        if (this.repo.size() < STRATEGY_MA_TYPE)
-            return false;
-        Double px = message.getDouble("last");
+        return false;
+    }
 
-        int size = this.repo.size();
-        List<JSONArray> subList = this.repo.subList(size - STRATEGY_MA_TYPE, size);
-        final BigDecimal[] total = {BigDecimal.ZERO};
-        subList.forEach(each -> total[0] = total[0].add(each.getBigDecimal(4)));
-        double ma = total[0].divide(new BigDecimal(String.valueOf(STRATEGY_MA_TYPE)), BigDecimal.ROUND_HALF_UP).doubleValue();
-//        debugStrategyCheck(ma, px);
-        return POS_SIDE.isLoss(ma, px);
+    @Override
+    public PosSide decideSide(JSONObject message) {
+        if (this.ema == 0) {
+            logger.warn("EMA not initialized out of expected");
+            return null;
+        }
+
+        Double px = message.getDouble("last");
+        double currentEMA = calcAndSetEMAByPrevious(px);
+        for (PosSide posSide : PosSide.values()) {
+            if (posSide.isProfit(currentEMA, px))
+                return posSide;
+        }
+        return null;
+    }
+
+    private double calcAndSetEMA() {
+        BigDecimal period = new BigDecimal(STRATEGY_EMA_TYPE);
+        BigDecimal[] ema = {null};
+        this.repo.forEach(each -> {
+            BigDecimal closePrice = each.getBigDecimal(4);
+            if (ema[0] == null)
+                ema[0] = closePrice;
+            else {
+                BigDecimal left = new BigDecimal("2").multiply(closePrice).divide(period.add(BigDecimal.ONE), BigDecimal.ROUND_HALF_UP);
+                BigDecimal right = period.subtract(BigDecimal.ONE).multiply(ema[0]).divide(period.add(BigDecimal.ONE), BigDecimal.ROUND_HALF_UP);
+                ema[0] = left.add(right);
+            }
+            System.out.println(ema[0]);
+        });
+        this.ema = ema[0].setScale(4, RoundingMode.HALF_UP).doubleValue();
+        return this.ema;
+    }
+
+    private double calcAndSetEMAByPrevious(double price) {
+        BigDecimal period = new BigDecimal(STRATEGY_EMA_TYPE);
+        BigDecimal px = BigDecimal.valueOf(price);
+        BigDecimal previous = BigDecimal.valueOf(this.ema);
+        return new BigDecimal("2").multiply(px.subtract(previous)).divide(BigDecimal.ONE.add(period), BigDecimal.ROUND_HALF_UP)
+                .add(previous).setScale(4, RoundingMode.HALF_UP).doubleValue();
     }
 
     private void debugStrategyCheck(double ma, double px) {
@@ -126,6 +163,27 @@ public class MAStrategy implements Strategy<JSONObject>, OkxMessageConsumer {
         if (this.displayInterval < now) {
             logger.debug("strategy ma={} px={}", ma, px);
             this.displayInterval = now + Setting.CANDLE_TYPE_MILLISECONDS;
+        }
+    }
+
+    public static void main(String[] args) {
+//        String dataSerial = "7.8355, 7.2712, 7.4882, 8.7208, 9.6118, 9.6908, 9.4246, 8.9740, 9.1889, 8.1940, 7.9424, 7.8070, 7.8391, 7.9433, 7.2354, 7.3611, 7.3259, 7.7373, 7.8029, 7.0959, 6.1995, 4.2682, 5.2575, 4.7043, 4.6616, 4.2853";
+        String dataSerial = "16685.7, 16773.1, 16651.2, 16541.2, 16584.8, 16660.0, 16609.0, 16671.0, 16634.7, 16579.7, 16594.6, 16561.8, 16538.6, 16570.1, 16496.9, 16394.6, 16448.3, 16336.9";
+        String[] split = dataSerial.split(", ");
+        List<JSONArray> list = new ArrayList<>();
+        for (String each : split)
+            list.add(JSONArray.of(0, 0, 0, 0, each));
+
+        EMAStrategy strategy = new EMAStrategy();
+
+//        strategy.repo = list;
+//        double ema = strategy.calcAndSetEMA();
+//        System.out.println(ema);
+
+        strategy.ema = 16867.2;
+        for (JSONArray array : list) {
+            double ema = strategy.calcAndSetEMAByPrevious(array.getDouble(4));
+            System.out.println(ema);
         }
     }
 
