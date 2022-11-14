@@ -117,14 +117,16 @@ public class MartinOrders {
     public double takeProfitPrice(Order order) {
         Integer idx = this.posToOrders.get(order.getPosition());
         BigDecimal px = BigDecimal.valueOf(order.getPrice());
-        BigDecimal tpRate = this.followRate.add(this.profitStepRate.multiply(new BigDecimal(String.valueOf(idx - 1))));
+//        BigDecimal tpRate = this.followRate.add(this.profitStepRate.multiply(new BigDecimal(String.valueOf(idx - 1))));
+        BigDecimal tpRate = this.followRate;
         tpRate = order.getPosSide() == PosSide.LongSide ? BigDecimal.ONE.add(tpRate) : BigDecimal.ONE.subtract(tpRate);
         return px.multiply(tpRate).doubleValue();
     }
 
     public double nextOrderPrice(Order order) {
         BigDecimal price = BigDecimal.valueOf(order.getPrice());
-        return price.multiply(BigDecimal.ONE.add(this.followRate), DEFAULT_MATH_CONTEXT).doubleValue();
+        BigDecimal rate = order.getPosSide() == PosSide.LongSide ? BigDecimal.ONE.subtract(this.followRate) : BigDecimal.ONE.add(this.followRate);
+        return price.multiply(rate, DEFAULT_MATH_CONTEXT).doubleValue();
     }
 
     public double extraMarginBalance(Order order) {
@@ -153,23 +155,27 @@ public class MartinOrders {
         this.resetting.compareAndSet(true, false);
     }
 
+    @Deprecated
     public double orderCost(Order order) {
         return BigDecimal.valueOf(order.getPrice())
                 .divide(BigDecimal.valueOf(Setting.ORDER_LEVER), DEFAULT_MATH_CONTEXT)
                 .multiply(BigDecimal.valueOf(order.getPosition()).divide(ONE_THOUSAND, DEFAULT_MATH_CONTEXT)).doubleValue();
     }
 
+    @Deprecated
     public double totalCost() {
         BigDecimal[] cost = new BigDecimal[]{BigDecimal.ZERO};
         this.allOrders().forEach(order -> cost[0] = cost[0].add(BigDecimal.valueOf(orderCost(order))));
         return cost[0].doubleValue();
     }
 
+    @Deprecated
     public double openFee(Order order) {
         BigDecimal actualPos = BigDecimal.valueOf(order.getPosition()).divide(ONE_THOUSAND, DEFAULT_MATH_CONTEXT);
         return BigDecimal.valueOf(order.getPrice()).multiply(actualPos).multiply(BigDecimal.valueOf(ORDER_FEE_RATE)).doubleValue();
     }
 
+    @Deprecated
     public double totalFee() {
         BigDecimal[] fee = new BigDecimal[]{BigDecimal.ZERO};
         Order[] last = new Order[1];
@@ -192,13 +198,8 @@ public class MartinOrders {
         MartinOrders martinOrders = MartinOrders.instance();
         martinOrders.first().setPrice(20000);
         martinOrders.calcOrdersPrice();
-        martinOrders.allOrders().forEach(o -> System.out.println(o.getPosition() + " ~ " + o.getPrice()
-                + " | " + martinOrders.orderCost(o)
-                + " + " + martinOrders.openFee(o)));
-        double totalCost = martinOrders.totalCost();
-        System.out.println(totalCost);
-        double totalFee = martinOrders.totalFee();
-        System.out.println(totalFee);
+        martinOrders.allOrders().forEach(x -> System.out.println(x.getPosition() + " " + x.getPrice() + " "
+                + martinOrders.nextOrderPrice(x) + " " + martinOrders.takeProfitPrice(x)));
     }
 
 }
