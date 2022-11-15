@@ -202,18 +202,19 @@ public class MartinOrders {
 
     public static void main(String[] args) {
         MartinOrders instance = MartinOrders.instance();
-        instance.setPosSide(1, PosSide.ShortSide);
+        instance.setPosSide(1, PosSide.LongSide);
         instance.allOrders().forEach(System.out::println);
 //        instance.allOrders().forEach(o -> System.out.println(instance.isLastOrder(o)));
         System.out.println(instance.followRates);
         System.out.println(instance.marginRates);
-        instance.first().setPrice(16601.7);
+        instance.first().setPrice(20000.0);
         instance.calcOrdersPrice();
         instance.allOrders().forEach(System.out::println);
         System.out.println("stop price: " + instance.nextOrderPrice(instance.getOrder(80)));
-        instance.allOrders().forEach(o -> System.out.println(instance.averageValue(o, true)));
+        instance.allOrders().forEach(o -> System.out.println("avg price: " + instance.averageValue(o, false)));
+        instance.allOrders().forEach(o -> System.out.println("avg value: " + instance.averageValue(o, true)));
+        instance.allOrders().forEach(o -> System.out.println("profit price: " + instance.takeProfitPrice(o)));
         System.out.println("margin: " + instance.totalExtraMargin());
-        instance.allOrders().forEach(o -> System.out.println(instance.takeProfitPrice(o)));
     }
 
 }

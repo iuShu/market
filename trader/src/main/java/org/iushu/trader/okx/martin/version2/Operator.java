@@ -133,7 +133,7 @@ public class Operator implements OkxMessageConsumer {
             return;
 
         double takeProfitPrice = MartinOrders.instance().takeProfitPrice(order);
-//        debugPriceCheck(takeProfitPrice);
+        debugPriceCheck(takeProfitPrice);
         for (Double price : this.prices) {
             if (!order.getPosSide().isProfit(takeProfitPrice, price))
                 return;
