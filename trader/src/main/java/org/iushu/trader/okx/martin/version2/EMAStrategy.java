@@ -144,7 +144,7 @@ public class EMAStrategy implements Strategy<JSONObject> {
                 BigDecimal right = period.subtract(BigDecimal.ONE).multiply(ema[0]).divide(period.add(BigDecimal.ONE), BigDecimal.ROUND_HALF_UP);
                 ema[0] = left.add(right);
             }
-            System.out.println(ema[0]);
+//            System.out.println(ema[0]);
         });
         this.ema = ema[0].setScale(4, RoundingMode.HALF_UP).doubleValue();
         return this.ema;
