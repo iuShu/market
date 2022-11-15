@@ -3,6 +3,7 @@ package org.iushu.trader.okx.martin.version2;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import org.iushu.trader.base.Constants;
+import org.iushu.trader.base.DefaultExecutor;
 import org.iushu.trader.base.NotifyUtil;
 import org.iushu.trader.base.PosSide;
 import org.iushu.trader.okx.*;
@@ -147,17 +148,25 @@ public class Operator implements OkxMessageConsumer {
                 return;     // could be closed by other thread
             }
 
-            if (OkxHttpUtils.closePosition(order.getPosSide())) {
-                logger.info("close all position at {}", this.prices.get(this.prices.size() - 1));
-                NotifyUtil.windowTips("Order Close", "close all position orders success");
-            }
-            else {
-                logger.error("close all position failed");
-                NotifyUtil.windowTips("Order Close", "close all position orders failed");
-                this.closing.compareAndSet(true, false);    // reset
-            }
+            for (int i = 0; i < Setting.OPERATION_MAX_FAILURE_TIMES; i++)
+                if (this.closeAllPosition(order.getPosSide()))
+                    return;
+            this.closing.compareAndSet(true, false);    // reset for next re-try
         } catch (Exception e) {
             logger.error("close by take profit error", e);
+        }
+    }
+
+    private boolean closeAllPosition(PosSide posSide) {
+        if (OkxHttpUtils.closePosition(posSide)) {
+            logger.info("close all position at {}", this.prices.get(this.prices.size() - 1));
+            NotifyUtil.windowTips("Order Close", "close all position orders success");
+            return true;
+        }
+        else {
+            logger.error("close all position failed");
+            NotifyUtil.windowTips("Order Close", "close all position orders failed");
+            return false;
         }
     }
 

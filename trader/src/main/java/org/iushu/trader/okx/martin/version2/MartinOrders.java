@@ -9,6 +9,7 @@ import java.math.BigDecimal;
 import java.math.MathContext;
 import java.math.RoundingMode;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -21,7 +22,8 @@ import static org.iushu.trader.okx.Setting.*;
 public class MartinOrders {
 
     private final int maxOrder;
-    private final List<BigDecimal> followRates = new ArrayList<>(ORDER_MAX_ORDERS);
+    private final Map<Integer, BigDecimal> followRates = new HashMap<>(ORDER_MAX_ORDERS);
+    private final Map<Integer, BigDecimal> marginRates = new HashMap<>(ORDER_MAX_ORDERS);
     private final AtomicInteger batch = new AtomicInteger(1);
     private final AtomicInteger current = new AtomicInteger(0);
     private final Map<Integer, Order> orders;
@@ -39,10 +41,13 @@ public class MartinOrders {
         this.orders = new ConcurrentHashMap<>(maxOrder);
         this.posToIdx = new ConcurrentHashMap<>(maxOrder);
         prepareOrders();
-        this.followRates.add(new BigDecimal("0.01"));
-        this.followRates.add(new BigDecimal("0.02"));
-        this.followRates.add(new BigDecimal("0.04"));
-        this.followRates.add(new BigDecimal("0.07"));
+
+        Double[] followRates = {0.02, 0.04, 0.07, 0.14};
+        Double[] marginRates = {0.0, 0.03, 0.05, 0.09};
+        for (int i = 1; i <= this.maxOrder; i++) {
+            this.followRates.put(i, BigDecimal.valueOf(followRates[i-1]));
+            this.marginRates.put(i, BigDecimal.valueOf(marginRates[i-1]));
+        }
     }
 
     private void prepareOrders() {
@@ -115,7 +120,7 @@ public class MartinOrders {
     public void calcOrdersPrice() {
         for (int i = 2; i <= this.maxOrder; i++) {  // start from no.2 order
             Order order = this.orders.get(i);
-            order.setPrice(nextOrderPrice(order));
+            order.setPrice(nextOrderPrice(this.orders.get(i - 1)));
         }
     }
 
@@ -128,14 +133,36 @@ public class MartinOrders {
     }
 
     public double takeProfitPrice(Order order) {
-        BigDecimal px = BigDecimal.valueOf(order.getPrice());
-        BigDecimal lever = new BigDecimal(Setting.ORDER_LEVER);
-        BigDecimal tpRate = BigDecimal.valueOf(ORDER_TAKE_PROFIT_RATE).divide(lever, 4, BigDecimal.ROUND_HALF_UP);
+        BigDecimal px = BigDecimal.valueOf(averageValue(order, false));
+        BigDecimal tpRate = BigDecimal.valueOf(ORDER_TAKE_PROFIT_RATE).divide(ORDER_LEVER, 4, BigDecimal.ROUND_HALF_UP);
         BigDecimal rate = order.getPosSide() == PosSide.LongSide ? BigDecimal.ONE.add(tpRate) : BigDecimal.ONE.subtract(tpRate);
         return px.multiply(rate).setScale(4, RoundingMode.HALF_UP).doubleValue();
     }
 
-    // TODO stop loss price
+    private double averageValue(Order order, boolean value) {
+        Integer idx = this.posToIdx.get(order.getPosition());
+        BigDecimal totalPosition = BigDecimal.ZERO;
+        BigDecimal sum = BigDecimal.ZERO;
+        for (int i = 0; i < idx; i++) {
+            Order o = this.orders.get(i + 1);
+            BigDecimal pos = new BigDecimal(o.getPosition());
+            sum = sum.add(BigDecimal.valueOf(o.getPrice()).multiply(pos));
+            totalPosition = totalPosition.add(pos);
+        }
+        sum = sum.divide(totalPosition, 4, RoundingMode.HALF_UP);
+        return value ? sum.multiply(totalPosition, DEFAULT_MATH_CONTEXT).divide(ONE_THOUSAND, 4, RoundingMode.HALF_UP).divide(ORDER_LEVER, 4, RoundingMode.HALF_UP).doubleValue()
+                : sum.doubleValue();
+    }
+
+    public double totalExtraMargin() {
+        BigDecimal margin = BigDecimal.ZERO;
+        for (int i = 1; i <= this.maxOrder; i++) {
+            Order order = this.orders.get(i);
+            BigDecimal value = BigDecimal.valueOf(averageValue(order, true));
+            margin = margin.add(value.multiply(this.marginRates.get(i)).multiply(ORDER_LEVER));
+        }
+        return margin.setScale(4, RoundingMode.HALF_UP).doubleValue();
+    }
 
     public int getBatch() {
         return this.batch.get();
@@ -177,8 +204,16 @@ public class MartinOrders {
         MartinOrders instance = MartinOrders.instance();
         instance.setPosSide(1, PosSide.ShortSide);
         instance.allOrders().forEach(System.out::println);
-        instance.allOrders().forEach(o -> System.out.println(instance.isLastOrder(o)));
+//        instance.allOrders().forEach(o -> System.out.println(instance.isLastOrder(o)));
         System.out.println(instance.followRates);
+        System.out.println(instance.marginRates);
+        instance.first().setPrice(16601.7);
+        instance.calcOrdersPrice();
+        instance.allOrders().forEach(System.out::println);
+        System.out.println("stop price: " + instance.nextOrderPrice(instance.getOrder(80)));
+        instance.allOrders().forEach(o -> System.out.println(instance.averageValue(o, true)));
+        System.out.println("margin: " + instance.totalExtraMargin());
+        instance.allOrders().forEach(o -> System.out.println(instance.takeProfitPrice(o)));
     }
 
 }

@@ -3,6 +3,8 @@ package org.iushu.trader.okx.martin.version2;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import org.iushu.trader.base.NotifyUtil;
+import org.iushu.trader.base.PosSide;
+import org.iushu.trader.okx.OkxHttpUtils;
 import org.iushu.trader.okx.OkxMessageConsumer;
 import org.iushu.trader.okx.PacketUtils;
 import org.iushu.trader.okx.Setting;
@@ -90,6 +92,7 @@ public class Tracker implements OkxMessageConsumer {
                 if (position == Setting.ORDER_START_POS) {
                     MartinOrders.instance().calcOrdersPrice();
                     placeAllNext();
+                    addExtraMargin();
                 }
 
                 if (martinOrders.isLastOrder(live))
@@ -130,6 +133,21 @@ public class Tracker implements OkxMessageConsumer {
             this.client.shutdown();
             operating.release();
         }
+    }
+
+    private void addExtraMargin() {
+        PosSide posSide = MartinOrders.instance().first().getPosSide();
+        double margin = MartinOrders.instance().totalExtraMargin();
+        for (int i = 0; i < Setting.OPERATION_MAX_FAILURE_TIMES; i++) {
+            if (OkxHttpUtils.addExtraMargin(posSide, margin)) {
+                logger.info("add margin {} ok", margin);
+                return;
+            }
+        }
+        String errorMsg = String.format("add margin error by %s %s", posSide.getName(), margin);
+        logger.error(errorMsg);
+        NotifyUtil.windowTipsAndVoice("Order Error", errorMsg);
+        this.client.shutdown();
     }
 
     private void cancelAllPendingOrders() {
