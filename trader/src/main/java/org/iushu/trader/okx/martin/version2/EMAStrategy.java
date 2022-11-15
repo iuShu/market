@@ -22,7 +22,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import static org.iushu.trader.okx.OkxWsJsonClient.KEY_DATA;
 import static org.iushu.trader.okx.Setting.*;
 
-public class EMAStrategy implements Strategy<JSONObject>, OkxMessageConsumer {
+public class EMAStrategy implements Strategy<JSONObject> {
 
     private static final Logger logger = LoggerFactory.getLogger(EMAStrategy.class);
 
@@ -30,13 +30,13 @@ public class EMAStrategy implements Strategy<JSONObject>, OkxMessageConsumer {
     private static final int MAX_REPO_ELEMENTS = 200;
 
     private volatile double ema = 0.0;
-    private JSONArray current = null;
     private volatile long displayInterval = 0L;
     private final Lock acceptLock = new ReentrantLock();
     private volatile long timestamp = 0L;
+    private JSONArray current = null;
 
     public EMAStrategy() {
-//        this.prepare();
+        this.prepare();
     }
 
     @Override

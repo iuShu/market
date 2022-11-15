@@ -1,11 +1,13 @@
 package org.iushu.trader.okx.martin.version2;
 
+import org.iushu.trader.base.Constants;
 import org.iushu.trader.base.PosSide;
 import org.iushu.trader.okx.Setting;
 import org.iushu.trader.okx.martin.Order;
 
 import java.math.BigDecimal;
 import java.math.MathContext;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -64,6 +66,17 @@ public class MartinOrders {
         return INSTANCE;
     }
 
+    public void reset() {
+        if (!this.resetting.compareAndSet(false, true))
+            return;
+        this.batch.incrementAndGet();
+        this.current.set(0);
+        this.orders.clear();
+        this.posToIdx.clear();
+        prepareOrders();
+        this.resetting.compareAndSet(true, false);
+    }
+
     public void setPosSide(int batch, PosSide posSide) {
         if (this.batch.get() != batch)
             throw new IllegalStateException(String.format("obsoleted batch %d of %d", batch, this.batch.get()));
@@ -89,18 +102,56 @@ public class MartinOrders {
         return first;
     }
 
+    public boolean isLastOrder(Order order) {
+        return this.maxOrder == this.posToIdx.get(order.getPosition());
+    }
+
     public Order current() {
         Order currentOrder = orders.get(this.current.get());
         checkValidOrders(currentOrder);
         return currentOrder;
     }
 
+    public void calcOrdersPrice() {
+        for (int i = 2; i <= this.maxOrder; i++) {  // start from no.2 order
+            Order order = this.orders.get(i);
+            order.setPrice(nextOrderPrice(order));
+        }
+    }
+
     public double nextOrderPrice(Order order) {
         int idx = this.posToIdx.get(order.getPosition());
         BigDecimal followRate = this.followRates.get(idx);
-        BigDecimal price = BigDecimal.valueOf(order.getPrice());
+        BigDecimal price = BigDecimal.valueOf(first().getPrice());
         BigDecimal rate = order.getPosSide() == PosSide.LongSide ? BigDecimal.ONE.subtract(followRate) : BigDecimal.ONE.add(followRate);
         return price.multiply(rate, DEFAULT_MATH_CONTEXT).doubleValue();
+    }
+
+    public double takeProfitPrice(Order order) {
+        BigDecimal px = BigDecimal.valueOf(order.getPrice());
+        BigDecimal lever = new BigDecimal(Setting.ORDER_LEVER);
+        BigDecimal tpRate = BigDecimal.valueOf(ORDER_TAKE_PROFIT_RATE).divide(lever, 4, BigDecimal.ROUND_HALF_UP);
+        BigDecimal rate = order.getPosSide() == PosSide.LongSide ? BigDecimal.ONE.add(tpRate) : BigDecimal.ONE.subtract(tpRate);
+        return px.multiply(rate).setScale(4, RoundingMode.HALF_UP).doubleValue();
+    }
+
+    // TODO stop loss price
+
+    public int getBatch() {
+        return this.batch.get();
+    }
+
+    public Order getOrder(int position) {
+        Integer idx = this.posToIdx.get(position);
+        return idx == null ? null : this.orders.get(idx);
+    }
+
+    public String openSide() {
+        return first().getPosSide() == PosSide.LongSide ? SIDE_BUY : SIDE_SELL;
+    }
+
+    public String closeSide() {
+        return first().getPosSide() == PosSide.LongSide ? SIDE_SELL : SIDE_BUY;
     }
 
     public List<Order> allOrders() {
@@ -118,12 +169,16 @@ public class MartinOrders {
             throw new IllegalStateException("Illegal order idx: " + idx);
     }
 
+    public boolean validOrder(Order order) {
+        return order != null && (order.getOrderId() != null || Constants.ORDER_STATE_FILLED.equals(order.getState()));
+    }
+
     public static void main(String[] args) {
         MartinOrders instance = MartinOrders.instance();
         instance.setPosSide(1, PosSide.ShortSide);
         instance.allOrders().forEach(System.out::println);
+        instance.allOrders().forEach(o -> System.out.println(instance.isLastOrder(o)));
         System.out.println(instance.followRates);
-
     }
 
 }

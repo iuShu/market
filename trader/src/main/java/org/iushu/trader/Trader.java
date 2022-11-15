@@ -1,9 +1,13 @@
 package org.iushu.trader;
 
+import com.alibaba.fastjson2.JSONObject;
 import org.iushu.trader.base.DefaultExecutor;
 import org.iushu.trader.okx.OkxPrivateWsJsonClient;
 import org.iushu.trader.okx.OkxWsJsonClient;
-import org.iushu.trader.okx.martin.*;
+import org.iushu.trader.okx.martin.Strategy;
+import org.iushu.trader.okx.martin.version2.Operator;
+import org.iushu.trader.okx.martin.version2.EMAStrategy;
+import org.iushu.trader.okx.martin.version2.Tracker;
 import org.iushu.trader.websocket.WsJsonClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,15 +28,15 @@ public class Trader {
     private OkxPrivateWsJsonClient privateClient = new OkxPrivateWsJsonClient();
 
     private Trader() {
-        MAStrategy strategy = new MAStrategy();
+        Strategy<JSONObject> strategy = new EMAStrategy();
         Operator operator = new Operator(strategy);
-        Authenticator authenticator = new Authenticator();
+        Tracker tracker = new Tracker();
 
         wsClient.register(strategy);
         wsClient.register(operator);
 
         privateClient.register(operator);
-        privateClient.register(authenticator);
+        privateClient.register(tracker);
         privateClient.afterLogin((c) -> DefaultExecutor.executor().submit(wsClient::start));
     }
 

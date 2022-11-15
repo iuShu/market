@@ -51,13 +51,14 @@ public interface Setting {
     PosSide POS_SIDE = PosSide.ShortSide;
     String SIDE_OPEN = Constants.SIDE_SELL;
     String SIDE_CLOSE = Constants.SIDE_BUY;
-    int ORDER_LEVER = 100;
+    int ORDER_LEVER = 50;
     int ORDER_START_POS = 10;
+    double ORDER_TAKE_PROFIT_RATE = 1.0;
     double ORDER_FOLLOW_RATE = 0.005;
     double ORDER_PROFIT_STEP_RATE = 0.0002;     // deprecated
     double ORDER_FEE_RATE = 0.0005;
     int ORDER_MAX_ORDERS = 5;
-    int ORDER_CLOSE_PX_THRESHOLD = 2;
+    int ORDER_CLOSE_PX_THRESHOLD = 3;
     int OPERATION_MAX_FAILURE_TIMES = 5;
 
 }

@@ -20,7 +20,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import static org.iushu.trader.okx.OkxWsJsonClient.KEY_DATA;
 import static org.iushu.trader.okx.Setting.*;
 
-public class MAStrategy implements Strategy<JSONObject>, OkxMessageConsumer {
+public class MAStrategy implements Strategy<JSONObject> {
 
     private static final Logger logger = LoggerFactory.getLogger(MAStrategy.class);
 
