@@ -16,10 +16,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 import static java.util.Collections.singletonList;
 
@@ -27,6 +24,7 @@ public abstract class WsJsonClient {
 
     private static final Logger logger = LoggerFactory.getLogger(WsJsonClient.class);
     private static final int RECONNECT_INTERVAL = 2;
+    private static final int MAX_RETRY_TIMES = 5;
 
     private InstanceManager instanceManager;
     private ClientEndpointConfig endpointConfig;
@@ -35,6 +33,7 @@ public abstract class WsJsonClient {
 
     private final ExecutorService executor = DefaultExecutor.executor();
     private boolean reconnect = true;
+    private int reconnect_times = 0;
     protected Map<Object, List<MessageConsumer>> consumers = new ConcurrentHashMap<>();
 
     public WsJsonClient() {
@@ -175,8 +174,12 @@ public abstract class WsJsonClient {
             WebSocketContainer container = ContainerProvider.getWebSocketContainer();
             container.connectToServer(endpoint, endpointConfig, URI.create(ws_url));
             logger.info("ws client connect finished");
+            this.reconnect_times = 0;
         } catch (Exception e) {
-            logger.error("connect to server failed", e);
+            if (e instanceof DeploymentException && e.getCause() instanceof TimeoutException)
+                logger.error("connect server timeout");
+            else
+                logger.error("connect to server failed", e);
             this.tryReconnect();
         }
     }
@@ -193,9 +196,10 @@ public abstract class WsJsonClient {
     }
 
     private void tryReconnect() {
-        if (!this.reconnect)
+        if (!this.reconnect || this.reconnect_times >= MAX_RETRY_TIMES)
             return;
 
+        this.reconnect_times += 1;
         logger.warn("{}s later try reconnect to {}", RECONNECT_INTERVAL, wsUrl());
         DefaultExecutor.scheduler().schedule(this::start, RECONNECT_INTERVAL, TimeUnit.SECONDS);
     }

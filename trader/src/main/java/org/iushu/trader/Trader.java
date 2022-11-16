@@ -4,6 +4,7 @@ import com.alibaba.fastjson2.JSONObject;
 import org.iushu.trader.base.DefaultExecutor;
 import org.iushu.trader.okx.OkxPrivateWsJsonClient;
 import org.iushu.trader.okx.OkxWsJsonClient;
+import org.iushu.trader.okx.Setting;
 import org.iushu.trader.okx.martin.Strategy;
 import org.iushu.trader.okx.martin.version2.Operator;
 import org.iushu.trader.okx.martin.version2.EMAStrategy;
@@ -28,6 +29,8 @@ public class Trader {
     private OkxPrivateWsJsonClient privateClient = new OkxPrivateWsJsonClient();
 
     private Trader() {
+        logger.info("running at {} env", Setting.ENV.toUpperCase());
+
         Strategy<JSONObject> strategy = new EMAStrategy();
         Operator operator = new Operator(strategy);
         Tracker tracker = new Tracker();

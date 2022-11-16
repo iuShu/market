@@ -3,6 +3,7 @@ package org.iushu.trader;
 import org.iushu.trader.base.DefaultExecutor;
 import org.iushu.trader.okx.OkxPrivateWsJsonClient;
 import org.iushu.trader.okx.OkxWsJsonClient;
+import org.iushu.trader.okx.Setting;
 import org.iushu.trader.okx.martin.Authenticator;
 import org.iushu.trader.okx.martin.MAStrategy;
 import org.iushu.trader.okx.martin.Operator;
@@ -27,6 +28,8 @@ public class RealTraderTest {
     private OkxPrivateWsJsonClient privateClient = new OkxPrivateWsJsonClient();
 
     private RealTraderTest() {
+        logger.info("running at {} env", Setting.ENV.toUpperCase());
+
         MAStrategy strategy = new MAStrategy();
         RealOperatorTest operator = new RealOperatorTest(strategy);
 
