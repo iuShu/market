@@ -103,7 +103,6 @@ public class MartinOrders {
 
     public Order first() {
         Order first = this.orders.get(1);
-        checkValidOrders(first);
         return first;
     }
 
@@ -197,7 +196,8 @@ public class MartinOrders {
     }
 
     public boolean validOrder(Order order) {
-        return order != null && (order.getOrderId() != null || Constants.ORDER_STATE_FILLED.equals(order.getState()));
+        return order != null && order.getPosSide() != null && order.getSide() != null
+                && (order.getOrderId() != null || Constants.ORDER_STATE_FILLED.equals(order.getState()));
     }
 
     public static void main(String[] args) {
