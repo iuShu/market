@@ -102,8 +102,7 @@ public class MartinOrders {
     }
 
     public Order first() {
-        Order first = this.orders.get(1);
-        return first;
+        return this.orders.get(1);
     }
 
     public boolean isLastOrder(Order order) {
@@ -169,7 +168,9 @@ public class MartinOrders {
 
     public Order getOrder(int position) {
         Integer idx = this.posToIdx.get(position);
-        return idx == null ? null : this.orders.get(idx);
+        Order order = this.orders.get(idx);
+        checkValidOrders(order);
+        return order;
     }
 
     public String openSide() {
