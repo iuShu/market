@@ -196,8 +196,12 @@ public abstract class WsJsonClient {
     }
 
     private void tryReconnect() {
-        if (!this.reconnect || this.reconnect_times >= MAX_RETRY_TIMES)
+        if (!this.reconnect)
             return;
+        if (this.reconnect_times >= MAX_RETRY_TIMES) {
+            this.shutdown();
+            return;
+        }
 
         this.reconnect_times += 1;
         logger.warn("{}s later try reconnect to {}", RECONNECT_INTERVAL, wsUrl());
