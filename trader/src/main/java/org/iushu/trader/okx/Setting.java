@@ -27,6 +27,9 @@ public interface Setting {
     String WSS_PRV_CHANNEL_ACCOUNT = "account";
 
     String API_CANDLE_DATA = "/api/v5/market/candles";
+    String API_LEVERAGE = "/api/v5/account/leverage-info";
+    String API_SET_LEVERAGE = "/api/v5/account/set-leverage";
+    String API_BALANCE = "/api/v5/account/balance";
     String API_MARGIN_BALANCE = "/api/v5/account/position/margin-balance";
     String API_CLOSE_POSITION = "/api/v5/trade/close-position";
 
@@ -35,7 +38,8 @@ public interface Setting {
     String INST_TYPE = Constants.INST_TYPE_SWAP;
     String CANDLE_TYPE = Constants.CANDLE_TYPE_1M;
     int CANDLE_TYPE_MILLISECONDS = 60000;
-    String TD_MODE = Constants.TD_MODE_ISOLATED;
+    String TD_MODE = Configuration.getString("position.mode");
+    String CURRENCY = Configuration.getString("trade.currency");
 
     OkxChannel CHANNEL_TICKERS = new OkxChannel(WSS_PUB_CHANNEL_TICKERS, INST_ID);
     OkxChannel CHANNEL_CANDLE = new OkxChannel(WSS_PUB_CHANNEL_CANDLE + CANDLE_TYPE, INST_ID);
@@ -51,7 +55,7 @@ public interface Setting {
     PosSide POS_SIDE = PosSide.ShortSide;
     String SIDE_OPEN = Constants.SIDE_SELL;
     String SIDE_CLOSE = Constants.SIDE_BUY;
-    int ORDER_LEVER = 50;
+    int ORDER_LEVER = Configuration.getInt(String.format("position.%s.lever", TD_MODE));
     int ORDER_START_POS = 10;
     double ORDER_TAKE_PROFIT_RATE = 1.0;
     double ORDER_FOLLOW_RATE = 0.005;

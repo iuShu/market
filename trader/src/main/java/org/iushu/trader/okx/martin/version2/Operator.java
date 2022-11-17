@@ -3,7 +3,6 @@ package org.iushu.trader.okx.martin.version2;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import org.iushu.trader.base.Constants;
-import org.iushu.trader.base.DefaultExecutor;
 import org.iushu.trader.base.NotifyUtil;
 import org.iushu.trader.base.PosSide;
 import org.iushu.trader.okx.*;
@@ -37,12 +36,28 @@ public class Operator implements OkxMessageConsumer {
     private volatile long coolingDown = 0L;
     private volatile long displayInterval = 0L;
     private volatile int orderBatch;
+    private double accountBalance = 0.0;
 
     private final List<Double> prices = new CopyOnWriteArrayList<>();
 
     public Operator(Strategy<JSONObject> strategy) {
         this.strategy = strategy;
         this.orderBatch = MartinOrders.instance().getBatch();
+        prepare();
+    }
+
+    private void prepare() {
+        int leverage = OkxHttpUtils.getLeverage();
+        if (leverage != Setting.ORDER_LEVER) {
+            if (!OkxHttpUtils.setLeverage(Setting.ORDER_LEVER))
+                throw new IllegalStateException(String.format("set leverage to %s failed", leverage));
+            logger.warn("set leverage from {} to {}", leverage, Setting.ORDER_LEVER);
+        }
+        logger.info("use position leverage at {}x", Setting.ORDER_LEVER);
+        logger.info("trade by currency {}", Setting.CURRENCY);
+
+        this.getAndSetBalance();
+        logger.info("account balance {} {}", this.accountBalance, Setting.CURRENCY);
     }
 
     @Override
@@ -93,7 +108,7 @@ public class Operator implements OkxMessageConsumer {
         }
 
         PosSide posSide = strategy.decideSide(ticker);
-        if (posSide == null)
+        if (posSide == null || !checkCostAndBalance(price))
             return;
 
         MartinOrders.instance().setPosSide(this.orderBatch, posSide);
@@ -168,6 +183,27 @@ public class Operator implements OkxMessageConsumer {
             NotifyUtil.windowTips("Order Close", "close all position orders failed");
             return false;
         }
+    }
+
+    private double getAndSetBalance() {
+        double balance = OkxHttpUtils.getBalance();
+        if (balance <= 0)
+            throw new IllegalStateException("deficient balance for trading");
+        this.accountBalance = balance;
+        return balance;
+    }
+
+    private boolean checkCostAndBalance(double price) {
+        double totalCost = MartinOrders.instance().totalCost(price);
+        if (this.accountBalance < totalCost) {
+            this.getAndSetBalance();
+            if (this.accountBalance < totalCost) {
+                logger.warn("stop machine due to deficient balance for trading");
+                this.privateClient.shutdown();
+                return false;
+            }
+        }
+        return true;
     }
 
     private void checkFirstOrderPlacing(JSONObject message) {

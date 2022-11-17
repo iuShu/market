@@ -39,6 +39,33 @@ public class OkxHttpUtils {
         return checkResp(response, "close position");
     }
 
+    public static int getLeverage() {
+        JSONObject body = JSONObject.of("instId", Setting.INST_ID, "mgnMode", Setting.TD_MODE);
+        JSONObject response = HttpUtils.post(Setting.API_LEVERAGE, body);
+        if (!checkResp(response, "get leverage"))
+            return -1;
+        JSONArray data = response.getJSONArray("data");
+        return data.getJSONObject(0).getIntValue("lever", -1);
+    }
+
+    public static boolean setLeverage(int lever) {
+        JSONObject body = JSONObject.of("instId", Setting.INST_ID);
+        body.put("lever", lever);
+        body.put("mgnMode", Setting.TD_MODE);
+        JSONObject response = HttpUtils.post(Setting.API_SET_LEVERAGE, body);
+        return checkResp(response, "set leverage");
+    }
+
+    public static double getBalance() {
+        JSONObject body = JSONObject.of("ccy", Setting.CURRENCY);
+        JSONObject response = HttpUtils.post(Setting.API_BALANCE, body);
+        if (!checkResp(response, "get balance of " + Setting.CURRENCY))
+            return 0.0;
+        JSONArray data = response.getJSONArray("data");
+        JSONArray details = data.getJSONObject(0).getJSONArray("details");
+        return details.getJSONObject(0).getDoubleValue("availEq");
+    }
+
     private static boolean checkResp(JSONObject response, String topic) {
         if (response != null && response.getIntValue("code", -1) == 0)
             return true;

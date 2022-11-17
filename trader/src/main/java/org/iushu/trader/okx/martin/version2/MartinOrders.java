@@ -162,6 +162,39 @@ public class MartinOrders {
         return margin.setScale(4, RoundingMode.HALF_UP).doubleValue();
     }
 
+    public double totalCost(double price) {
+        long count = this.allOrders().stream().filter(o -> o.getPosSide() != null).count();
+        if (count != 0 && this.resetting.get())
+            throw new IllegalStateException("total-cost calculation is not permitted currently");
+
+        int rawBatch = this.batch.get();
+        this.setPosSide(this.batch.get(), PosSide.ShortSide);
+        this.first().setPrice(price);
+        this.calcOrdersPrice();
+        BigDecimal[] shortCost = {BigDecimal.ZERO};
+        this.allOrders().forEach(o -> {
+            BigDecimal val = BigDecimal.valueOf(o.getPrice()).multiply(new BigDecimal(o.getPosition()));
+            shortCost[0] = shortCost[0].add(val.divide(ONE_THOUSAND, 4, RoundingMode.HALF_UP).divide(ORDER_LEVER, 4, RoundingMode.HALF_UP));
+        });
+        shortCost[0] = shortCost[0].add(BigDecimal.valueOf(this.totalExtraMargin()));
+
+        this.setPosSide(this.batch.get(), PosSide.LongSide);
+        this.first().setPrice(price);
+        this.calcOrdersPrice();
+        BigDecimal[] longCost = {BigDecimal.ZERO};
+        this.allOrders().forEach(o -> {
+            BigDecimal val = BigDecimal.valueOf(o.getPrice()).multiply(new BigDecimal(o.getPosition()));
+            longCost[0] = longCost[0].add(val.divide(ONE_THOUSAND, 4, RoundingMode.HALF_UP).divide(ORDER_LEVER, 4, RoundingMode.HALF_UP));
+        });
+        longCost[0] = longCost[0].add(BigDecimal.valueOf(this.totalExtraMargin()));
+
+        this.reset();
+        if (!this.batch.compareAndSet(rawBatch - 1, rawBatch))
+            throw new IllegalStateException("unexpected operation during total-cost calculation");
+        return Math.max(shortCost[0].setScale(4, RoundingMode.HALF_UP).doubleValue(),
+                longCost[0].setScale(4, RoundingMode.HALF_UP).doubleValue());
+    }
+
     public int getBatch() {
         return this.batch.get();
     }
