@@ -70,7 +70,6 @@ public class Operator implements OkxMessageConsumer {
 
         // ensure balance
         this.getAndSetBalance();
-        logger.info("account balance {} {}", this.accountBalance, Setting.CURRENCY);
     }
 
     @Override
@@ -117,6 +116,8 @@ public class Operator implements OkxMessageConsumer {
                 this.closing.compareAndSet(true, false);
                 logger.info("all position has been closed, reset closing");
             }
+            this.getAndSetBalance();    // refresh balance
+            this.privateClient.shutdown();  // TODO dev test only
             coolingDown();
         }
 
@@ -203,6 +204,7 @@ public class Operator implements OkxMessageConsumer {
         if (balance <= 0)
             throw new IllegalStateException("deficient balance for trading");
         this.accountBalance = balance;
+        logger.info("account balance {} {}", this.accountBalance, Setting.CURRENCY);
         return balance;
     }
 

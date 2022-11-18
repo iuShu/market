@@ -81,7 +81,7 @@ public class OkxHttpUtils {
 
     public static double getBalance() {
         JSONObject body = JSONObject.of("ccy", Setting.CURRENCY);
-        JSONObject response = HttpUtils.post(Setting.API_BALANCE, body);
+        JSONObject response = HttpUtils.get(Setting.API_BALANCE, body);
         if (!checkResp(response, "get balance of " + Setting.CURRENCY))
             return 0.0;
         JSONArray data = response.getJSONArray("data");

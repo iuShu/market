@@ -6,8 +6,6 @@ import org.iushu.trader.okx.Setting;
 import org.iushu.trader.okx.martin.Order;
 
 import java.math.BigDecimal;
-import java.math.MathContext;
-import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -16,6 +14,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static java.math.BigDecimal.ONE;
+import static java.math.BigDecimal.ZERO;
+import static org.iushu.trader.base.CalculateUtils.*;
 import static org.iushu.trader.base.Constants.*;
 import static org.iushu.trader.okx.Setting.*;
 
@@ -33,7 +34,6 @@ public class MartinOrders {
 
     private final BigDecimal ONE_THOUSAND = new BigDecimal("1000");
     private final BigDecimal ORDER_LEVER = new BigDecimal(Setting.ORDER_LEVER);
-    private final MathContext DEFAULT_MATH_CONTEXT = new MathContext(10);
 
     private static final MartinOrders INSTANCE = new MartinOrders();
 
@@ -46,8 +46,8 @@ public class MartinOrders {
         Double[] followRates = {0.02, 0.04, 0.07, 0.14};
         Double[] marginRates = {0.0, 0.03, 0.05, 0.09};
         for (int i = 1; i <= this.maxOrder; i++) {
-            this.followRates.put(i, BigDecimal.valueOf(followRates[i-1]));
-            this.marginRates.put(i, BigDecimal.valueOf(marginRates[i-1]));
+            this.followRates.put(i, decimal(followRates[i-1]));
+            this.marginRates.put(i, decimal(marginRates[i-1]));
         }
     }
 
@@ -126,41 +126,37 @@ public class MartinOrders {
     public double nextOrderPrice(Order order) {
         int idx = this.posToIdx.get(order.getPosition());
         BigDecimal followRate = this.followRates.get(idx);
-        BigDecimal price = BigDecimal.valueOf(first().getPrice());
-        BigDecimal rate = order.getPosSide() == PosSide.LongSide ? BigDecimal.ONE.subtract(followRate) : BigDecimal.ONE.add(followRate);
-        return price.multiply(rate, DEFAULT_MATH_CONTEXT).doubleValue();
+        BigDecimal rate = order.getPosSide() == PosSide.LongSide ? ONE.subtract(followRate) : ONE.add(followRate);
+        return doubleNum(mlt(decimal(first().getPrice()), rate));
     }
 
     public double takeProfitPrice(Order order) {
-        BigDecimal px = BigDecimal.valueOf(averageValue(order, false));
-        BigDecimal tpRate = BigDecimal.valueOf(ORDER_TAKE_PROFIT_RATE).divide(ORDER_LEVER, 4, BigDecimal.ROUND_HALF_UP);
-        BigDecimal rate = order.getPosSide() == PosSide.LongSide ? BigDecimal.ONE.add(tpRate) : BigDecimal.ONE.subtract(tpRate);
-        return px.multiply(rate).setScale(4, RoundingMode.HALF_UP).doubleValue();
+        BigDecimal tpRate = div(decimal(ORDER_TAKE_PROFIT_RATE), ORDER_LEVER);
+        BigDecimal rate = order.getPosSide() == PosSide.LongSide ? ONE.add(tpRate) : ONE.subtract(tpRate);
+        return doubleNum(mlt(averageValue(order, false), rate));
     }
 
-    private double averageValue(Order order, boolean value) {
+    private BigDecimal averageValue(Order order, boolean value) {
         Integer idx = this.posToIdx.get(order.getPosition());
-        BigDecimal totalPosition = BigDecimal.ZERO;
-        BigDecimal sum = BigDecimal.ZERO;
+        BigDecimal totalPosition = ZERO;
+        BigDecimal sum = ZERO;
         for (int i = 0; i < idx; i++) {
             Order o = this.orders.get(i + 1);
-            BigDecimal pos = new BigDecimal(o.getPosition());
-            sum = sum.add(BigDecimal.valueOf(o.getPrice()).multiply(pos));
-            totalPosition = totalPosition.add(pos);
+            BigDecimal pos = decimal(o.getPosition());
+            sum = add(sum, mlt(decimal(o.getPrice()), pos));
+            totalPosition = add(totalPosition, pos);
         }
-        sum = sum.divide(totalPosition, 4, RoundingMode.HALF_UP);
-        return value ? sum.multiply(totalPosition, DEFAULT_MATH_CONTEXT).divide(ONE_THOUSAND, 4, RoundingMode.HALF_UP).divide(ORDER_LEVER, 4, RoundingMode.HALF_UP).doubleValue()
-                : sum.doubleValue();
+        sum = div(sum, totalPosition);
+        return value ? div(div(mlt(sum, totalPosition), ONE_THOUSAND), ORDER_LEVER) : sum;
     }
 
     public double totalExtraMargin() {
-        BigDecimal margin = BigDecimal.ZERO;
+        BigDecimal margin = ZERO;
         for (int i = 1; i <= this.maxOrder; i++) {
             Order order = this.orders.get(i);
-            BigDecimal value = BigDecimal.valueOf(averageValue(order, true));
-            margin = margin.add(value.multiply(this.marginRates.get(i)).multiply(ORDER_LEVER));
+            margin = add(margin, mlt(mlt(averageValue(order, true), this.marginRates.get(i)), ORDER_LEVER));
         }
-        return margin.setScale(4, RoundingMode.HALF_UP).doubleValue();
+        return doubleNum(margin);
     }
 
     public double totalCost(double price) {
@@ -169,31 +165,26 @@ public class MartinOrders {
             throw new IllegalStateException("total-cost calculation is not permitted currently");
 
         int rawBatch = this.batch.get();
-        this.setPosSide(this.batch.get(), PosSide.ShortSide);
-        this.first().setPrice(price);
-        this.calcOrdersPrice();
-        BigDecimal[] shortCost = {BigDecimal.ZERO};
-        this.allOrders().forEach(o -> {
-            BigDecimal val = BigDecimal.valueOf(o.getPrice()).multiply(new BigDecimal(o.getPosition()));
-            shortCost[0] = shortCost[0].add(val.divide(ONE_THOUSAND, 4, RoundingMode.HALF_UP).divide(ORDER_LEVER, 4, RoundingMode.HALF_UP));
-        });
-        shortCost[0] = shortCost[0].add(BigDecimal.valueOf(this.totalExtraMargin()));
-
-        this.setPosSide(this.batch.get(), PosSide.LongSide);
-        this.first().setPrice(price);
-        this.calcOrdersPrice();
-        BigDecimal[] longCost = {BigDecimal.ZERO};
-        this.allOrders().forEach(o -> {
-            BigDecimal val = BigDecimal.valueOf(o.getPrice()).multiply(new BigDecimal(o.getPosition()));
-            longCost[0] = longCost[0].add(val.divide(ONE_THOUSAND, 4, RoundingMode.HALF_UP).divide(ORDER_LEVER, 4, RoundingMode.HALF_UP));
-        });
-        longCost[0] = longCost[0].add(BigDecimal.valueOf(this.totalExtraMargin()));
+        double longCost = this.calcTotalCost(PosSide.LongSide, price);
+        double shortCost = this.calcTotalCost(PosSide.ShortSide, price);
 
         this.reset();
-        if (!this.batch.compareAndSet(rawBatch - 1, rawBatch))
+        int before = this.batch.getAndSet(rawBatch);
+        if (before != rawBatch)
             throw new IllegalStateException("unexpected operation during total-cost calculation");
-        return Math.max(shortCost[0].setScale(4, RoundingMode.HALF_UP).doubleValue(),
-                longCost[0].setScale(4, RoundingMode.HALF_UP).doubleValue());
+        return Math.max(shortCost, longCost);
+    }
+
+    private double calcTotalCost(PosSide posSide, double price) {
+        this.setPosSide(this.batch.get(), posSide);
+        this.first().setPrice(price);
+        this.calcOrdersPrice();
+        BigDecimal cost = ZERO;
+        for (Order order : this.allOrders()) {
+            BigDecimal val = mlt(order.getPrice(), order.getPosition());
+            cost = add(cost, div(div(val, ONE_THOUSAND), ORDER_LEVER));
+        }
+        return doubleNum(add(cost, decimal(this.totalExtraMargin())));
     }
 
     public double stopLossPrice() {
