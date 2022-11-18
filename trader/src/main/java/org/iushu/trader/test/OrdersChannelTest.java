@@ -1,0 +1,23 @@
+package org.iushu.trader.test;
+
+import com.alibaba.fastjson2.JSONObject;
+import org.iushu.trader.okx.OkxMessageConsumer;
+import org.iushu.trader.okx.Setting;
+import org.iushu.trader.okx.martin.version2.Tracker;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+public class OrdersChannelTest implements OkxMessageConsumer {
+
+    private static final Logger logger = LoggerFactory.getLogger(Tracker.class);
+
+    @Override
+    public JSONObject privateChannel() {
+        return Setting.CHANNEL_ORDERS;
+    }
+
+    @Override
+    public void consume(JSONObject message) {
+        logger.info(">> {}", message.toJSONString());
+    }
+}
