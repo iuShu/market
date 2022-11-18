@@ -47,15 +47,28 @@ public class Operator implements OkxMessageConsumer {
     }
 
     private void prepare() {
-        int leverage = OkxHttpUtils.getLeverage();
-        if (leverage != Setting.ORDER_LEVER) {
-            if (!OkxHttpUtils.setLeverage(Setting.ORDER_LEVER))
-                throw new IllegalStateException(String.format("set leverage to %s failed", leverage));
-            logger.warn("set leverage from {} to {}", leverage, Setting.ORDER_LEVER);
+        // ensure lever
+        int longLever = 0, shortLever = 0;
+        JSONArray data = OkxHttpUtils.getLeverage();
+        for (int i = 0; i < data.size(); i++) {
+            JSONObject each = data.getJSONObject(i);
+            PosSide posSide = PosSide.of(each.getString("posSide"));
+            longLever = posSide == PosSide.LongSide ? each.getIntValue("lever", -1) : longLever;
+            shortLever = posSide == PosSide.ShortSide ? each.getIntValue("lever", -1) : shortLever;
+        }
+        if (longLever != Setting.ORDER_LEVER) {
+            if (!OkxHttpUtils.setLeverage(PosSide.LongSide, Setting.ORDER_LEVER))
+                throw new IllegalStateException(String.format("set long lever to %s failed", Setting.ORDER_LEVER));
+            logger.warn("set long lever to {}", Setting.ORDER_LEVER);
+        }
+        if (shortLever != Setting.ORDER_LEVER) {
+            if (!OkxHttpUtils.setLeverage(PosSide.ShortSide, Setting.ORDER_LEVER))
+                throw new IllegalStateException(String.format("set short lever to %s failed", Setting.ORDER_LEVER));
+            logger.warn("set short lever to {}", Setting.ORDER_LEVER);
         }
         logger.info("use position leverage at {}x", Setting.ORDER_LEVER);
-        logger.info("trade by currency {}", Setting.CURRENCY);
 
+        // ensure balance
         this.getAndSetBalance();
         logger.info("account balance {} {}", this.accountBalance, Setting.CURRENCY);
     }

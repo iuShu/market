@@ -3,13 +3,12 @@ package org.iushu.trader.test;
 import com.alibaba.fastjson2.JSONObject;
 import org.iushu.trader.okx.OkxMessageConsumer;
 import org.iushu.trader.okx.Setting;
-import org.iushu.trader.okx.martin.version2.Tracker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class AlgoChannelTest implements OkxMessageConsumer {
 
-    private static final Logger logger = LoggerFactory.getLogger(Tracker.class);
+    private static final Logger logger = LoggerFactory.getLogger(AlgoChannelTest.class);
 
     @Override
     public JSONObject privateChannel() {

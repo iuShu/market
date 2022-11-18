@@ -95,6 +95,7 @@ public class Tracker implements OkxMessageConsumer {
                     addExtraMargin();
                 }
 
+                placeAlgoOrder();
                 if (martinOrders.isLastOrder(live))
                     logger.warn("last order has been filled at {} {}", live.getPrice(), position);
                 NotifyUtil.windowTipsAndVoice("Order Filled", "Order filled, price " + live.getPrice() + ", position " + position);
@@ -148,6 +149,47 @@ public class Tracker implements OkxMessageConsumer {
         logger.error(errorMsg);
         NotifyUtil.windowTipsAndVoice("Order Error", errorMsg);
         this.client.shutdown();
+    }
+
+    private void placeAlgoOrder() {
+        MartinOrders context = MartinOrders.instance();
+        String prevAlgoId = context.getAlgoId();
+        if (prevAlgoId != null) {
+            if (!OkxHttpUtils.cancelAlgoOrder(prevAlgoId)) {
+                if (this.failedTimes.incrementAndGet() < Setting.OPERATION_MAX_FAILURE_TIMES) {
+                    logger.error("cancel prev algo failed {}", this.failedTimes.get());
+                    this.placeAlgoOrder();
+                    return;
+                }
+                logger.error("cancel prev algo failed times reached threshold, shutdown program");
+                this.client.shutdown();
+                return;
+            }
+            this.failedTimes.set(0);
+            context.setAlgoId(null);
+            logger.info("cancel prev algo {}", prevAlgoId);
+        }
+
+        Order current = context.current();
+        int totalPosition = context.totalPosition(current);
+        double tpPrice = context.takeProfitPrice(current);
+        double slPrice = context.stopLossPrice();
+        JSONObject resp = OkxHttpUtils.placeAlgoOrder(current.getPosSide(), context.closeSide(),
+                totalPosition, tpPrice, slPrice);
+        if (resp.isEmpty()) {
+            if (this.failedTimes.incrementAndGet() < Setting.OPERATION_MAX_FAILURE_TIMES) {
+                logger.error("place algo failed {}", this.failedTimes.get());
+                this.placeAlgoOrder();
+                return;
+            }
+            logger.error("place algo failed times reached threshold, shutdown program");
+            this.client.shutdown();
+        }
+        else {
+            this.failedTimes.set(0);
+            context.setAlgoId(resp.getString("algoId"));
+            logger.info("place algo of {} tp={} sl={} ok", totalPosition, tpPrice, slPrice);
+        }
     }
 
     private void cancelAllPendingOrders() {

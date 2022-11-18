@@ -47,4 +47,15 @@ public interface Constants {
     String ORDER_STATE_FILLED = "filled";
     String ORDER_STATE_CANCELED = "canceled";
 
+    String ALGO_TYPE_CONDITIONAL = "conditional";
+    String ALGO_TYPE_OCO = "oco";
+    String ALGO_TYPE_TRIGGER = "trigger";
+    String ALGO_TYPE_MOVE_ORDER_STOP = "move_order_stop";
+    String ALGO_TYPE_ICEBERG = "iceberg";
+    String ALGO_TYPE_TWAP = "twap";
+
+    String ALGO_PX_TYPE_LAST = "last";
+    String ALGO_PX_TYPE_MARK = "mark";
+    String ALGO_PX_TYPE_INDEX = "index";
+
 }

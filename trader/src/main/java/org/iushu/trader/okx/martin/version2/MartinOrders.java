@@ -26,6 +26,7 @@ public class MartinOrders {
     private final Map<Integer, BigDecimal> marginRates = new HashMap<>(ORDER_MAX_ORDERS);
     private final AtomicInteger batch = new AtomicInteger(1);
     private final AtomicInteger current = new AtomicInteger(0);
+    private volatile String algoId = null;
     private final Map<Integer, Order> orders;
     private final Map<Integer, Integer> posToIdx;
     private final AtomicBoolean resetting = new AtomicBoolean(false);
@@ -195,6 +196,11 @@ public class MartinOrders {
                 longCost[0].setScale(4, RoundingMode.HALF_UP).doubleValue());
     }
 
+    public double stopLossPrice() {
+        Order last = this.orders.get(this.maxOrder);
+        return nextOrderPrice(last);
+    }
+
     public int getBatch() {
         return this.batch.get();
     }
@@ -204,6 +210,22 @@ public class MartinOrders {
         Order order = this.orders.get(idx);
         checkValidOrders(order);
         return order;
+    }
+
+    public int totalPosition(Order order) {
+        int idx = this.posToIdx.get(order.getPosition());
+        int total = 0;
+        for (int i = 1; i <= idx; i++)
+            total += this.orders.get(i).getPosition();
+        return total;
+    }
+
+    public void setAlgoId(String algoId) {
+        this.algoId = algoId;
+    }
+
+    public String getAlgoId() {
+        return algoId;
     }
 
     public String openSide() {
@@ -244,7 +266,8 @@ public class MartinOrders {
         instance.first().setPrice(20000.0);
         instance.calcOrdersPrice();
         instance.allOrders().forEach(System.out::println);
-        System.out.println("stop price: " + instance.nextOrderPrice(instance.getOrder(80)));
+        System.out.println("stop price: " + instance.stopLossPrice());
+        instance.allOrders().forEach(o -> System.out.println("total pos: " + instance.totalPosition(o)));
         instance.allOrders().forEach(o -> System.out.println("avg price: " + instance.averageValue(o, false)));
         instance.allOrders().forEach(o -> System.out.println("avg value: " + instance.averageValue(o, true)));
         instance.allOrders().forEach(o -> System.out.println("profit price: " + instance.takeProfitPrice(o)));

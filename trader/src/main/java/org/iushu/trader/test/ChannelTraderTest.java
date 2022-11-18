@@ -12,7 +12,7 @@ public class ChannelTraderTest {
     private final static WsJsonClient client = new OkxPrivateWsJsonClient();
 
     static {
-        client.register(new AlgoChannelTest());
+//        client.register(new AlgoChannelTest());
         client.register(new OrdersChannelTest());
     }
 

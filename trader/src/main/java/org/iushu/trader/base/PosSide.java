@@ -18,6 +18,13 @@ public enum PosSide {
         return this.name;
     }
 
+    public static PosSide of(String name) {
+        for (PosSide posSide : values())
+            if (posSide.getName().equals(name))
+                return posSide;
+        return null;
+    }
+
     public boolean isProfit(double px, double lastPx) {
         return this == LongSide ? px < lastPx : px > lastPx;
     }

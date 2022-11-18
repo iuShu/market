@@ -3,6 +3,7 @@ package org.iushu.trader.okx;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import org.iushu.trader.base.Constants;
+import org.iushu.trader.base.JSONArrayAdapter;
 import org.iushu.trader.base.PosSide;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,8 +27,32 @@ public class OkxHttpUtils {
         body.put("posSide", posSide.getName());
         body.put("type", "add");
         body.put("amt", Double.toString(amount));
-        JSONObject response = HttpUtils.post(Setting.API_MARGIN_BALANCE, body);
-        return checkResp(response, "add extra margin");
+        return checkResp(HttpUtils.post(Setting.API_MARGIN_BALANCE, body), "add extra margin");
+    }
+
+    public static JSONObject placeAlgoOrder(PosSide posSide, String side, int size, double tpPrice, double slPrice) {
+        JSONObject body = JSONObject.of("instId", Setting.INST_ID);
+        body.put("tdMode", Setting.TD_MODE);
+        body.put("posSide", posSide.getName());
+        body.put("side", side);
+        body.put("ordType", Constants.ALGO_TYPE_OCO);
+        body.put("sz", String.valueOf(size));
+        body.put("tpTriggerPxType", Constants.ALGO_PX_TYPE_LAST);
+        body.put("tpTriggerPx", Double.toString(tpPrice));
+        body.put("tpOrdPx", "-1");
+        body.put("slTriggerPxType", Constants.ALGO_PX_TYPE_LAST);
+        body.put("slTriggerPx", Double.toString(slPrice));
+        body.put("slOrdPx", "-1");
+        JSONObject response = HttpUtils.post(Setting.API_ALGO_ORDER, body);
+        if (checkResp(response, "place algo order"))
+            return response.getJSONArray("data").getJSONObject(0);
+        return JSONObject.of();
+    }
+
+    public static boolean cancelAlgoOrder(String algoOrderId) {
+        JSONObject data = JSONObject.of("instId", Setting.INST_ID, "algoId", algoOrderId);
+        JSONArrayAdapter body = new JSONArrayAdapter(JSONArray.of(data));
+        return checkResp(HttpUtils.post(Setting.API_CANCEL_ALGO, body), "cancel algo order");
     }
 
     public static boolean closePosition(PosSide posSide) {
@@ -35,25 +60,23 @@ public class OkxHttpUtils {
         body.put("posSide", posSide.getName());
         body.put("mgnMode", Setting.TD_MODE);
         body.put("autoCxl", true);
-        JSONObject response = HttpUtils.post(Setting.API_CLOSE_POSITION, body);
-        return checkResp(response, "close position");
+        return checkResp(HttpUtils.post(Setting.API_CLOSE_POSITION, body), "close position");
     }
 
-    public static int getLeverage() {
+    public static JSONArray getLeverage() {
         JSONObject body = JSONObject.of("instId", Setting.INST_ID, "mgnMode", Setting.TD_MODE);
-        JSONObject response = HttpUtils.post(Setting.API_LEVERAGE, body);
-        if (!checkResp(response, "get leverage"))
-            return -1;
-        JSONArray data = response.getJSONArray("data");
-        return data.getJSONObject(0).getIntValue("lever", -1);
+        JSONObject response = HttpUtils.get(Setting.API_LEVERAGE, body);
+        if (checkResp(response, "get leverage"))
+            return response.getJSONArray("data");
+        return JSONArray.of();
     }
 
-    public static boolean setLeverage(int lever) {
+    public static boolean setLeverage(PosSide posSide, int lever) {
         JSONObject body = JSONObject.of("instId", Setting.INST_ID);
         body.put("lever", lever);
         body.put("mgnMode", Setting.TD_MODE);
-        JSONObject response = HttpUtils.post(Setting.API_SET_LEVERAGE, body);
-        return checkResp(response, "set leverage");
+        body.put("posSide", posSide.getName());
+        return checkResp(HttpUtils.post(Setting.API_SET_LEVERAGE, body), "set leverage");
     }
 
     public static double getBalance() {

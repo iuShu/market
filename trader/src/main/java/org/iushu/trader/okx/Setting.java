@@ -32,6 +32,8 @@ public interface Setting {
     String API_BALANCE = "/api/v5/account/balance";
     String API_MARGIN_BALANCE = "/api/v5/account/position/margin-balance";
     String API_CLOSE_POSITION = "/api/v5/trade/close-position";
+    String API_ALGO_ORDER = "/api/v5/trade/order-algo";
+    String API_CANCEL_ALGO = "/api/v5/trade/cancel-algos";
 
     ExchangeType EXCHANGE = ExchangeType.OKX;
     String INST_ID = Constants.INST_ID_BTC_USDT_SWAP;
