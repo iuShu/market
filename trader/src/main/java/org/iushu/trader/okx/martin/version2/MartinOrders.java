@@ -86,6 +86,8 @@ public class MartinOrders {
     public void setPosSide(int batch, PosSide posSide) {
         if (this.batch.get() != batch)
             throw new IllegalStateException(String.format("obsoleted batch %d of %d", batch, this.batch.get()));
+        if (first().getPosSide() != null)
+            return;
         this.orders.values().forEach(each -> {
             each.setPosSide(posSide);
             each.setSide(posSide == PosSide.LongSide ? SIDE_BUY : SIDE_SELL);
@@ -139,15 +141,15 @@ public class MartinOrders {
     private BigDecimal averageValue(Order order, boolean value) {
         Integer idx = this.posToIdx.get(order.getPosition());
         BigDecimal totalPosition = ZERO;
-        BigDecimal sum = ZERO;
+        BigDecimal avgPx = ZERO;
         for (int i = 0; i < idx; i++) {
             Order o = this.orders.get(i + 1);
             BigDecimal pos = decimal(o.getPosition());
-            sum = add(sum, mlt(decimal(o.getPrice()), pos));
+            avgPx = add(avgPx, mlt(decimal(o.getPrice()), pos));
             totalPosition = add(totalPosition, pos);
         }
-        sum = div(sum, totalPosition);
-        return value ? div(div(mlt(sum, totalPosition), ONE_THOUSAND), ORDER_LEVER) : sum;
+        avgPx = div(avgPx, totalPosition);
+        return value ? div(div(mlt(avgPx, totalPosition), ONE_THOUSAND), ORDER_LEVER) : avgPx;
     }
 
     public double totalExtraMargin() {
@@ -159,20 +161,19 @@ public class MartinOrders {
         return doubleNum(margin);
     }
 
-    public double totalCost(double price) {
+    public double totalCost(double price, PosSide posSide) {
         long count = this.allOrders().stream().filter(o -> o.getPosSide() != null).count();
-        if (count != 0 && this.resetting.get())
-            throw new IllegalStateException("total-cost calculation is not permitted currently");
+        if (count != 0 || this.resetting.get())
+            return 0;
 
         int rawBatch = this.batch.get();
-        double longCost = this.calcTotalCost(PosSide.LongSide, price);
-        double shortCost = this.calcTotalCost(PosSide.ShortSide, price);
+        double cost = this.calcTotalCost(posSide, price);
 
         this.reset();
         int before = this.batch.getAndSet(rawBatch);
-        if (before != rawBatch)
+        if (before != rawBatch + 1)
             throw new IllegalStateException("unexpected operation during total-cost calculation");
-        return Math.max(shortCost, longCost);
+        return cost;
     }
 
     private double calcTotalCost(PosSide posSide, double price) {
@@ -249,6 +250,7 @@ public class MartinOrders {
 
     public static void main(String[] args) {
         MartinOrders instance = MartinOrders.instance();
+        System.out.println("total cost: " + instance.totalCost(20000.0, PosSide.LongSide));
         instance.setPosSide(1, PosSide.LongSide);
         instance.allOrders().forEach(System.out::println);
 //        instance.allOrders().forEach(o -> System.out.println(instance.isLastOrder(o)));

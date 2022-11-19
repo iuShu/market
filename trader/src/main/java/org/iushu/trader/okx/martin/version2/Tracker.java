@@ -69,7 +69,7 @@ public class Tracker implements OkxMessageConsumer {
                 plain.setOrderId(ordId);
                 plain.setCreateTime(order.getLong("cTime"));
                 plain.setUpdateTime(update);
-                logger.info("placed order {} pos={}", ordId, position);
+                logger.info("placed order {} pos={} {}", ordId, position, order.getString("px"));
                 break;
             case ORDER_STATE_FILLED:
                 if (martinOrders.closeSide().equals(side)) {

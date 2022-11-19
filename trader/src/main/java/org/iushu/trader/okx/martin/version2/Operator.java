@@ -122,7 +122,7 @@ public class Operator implements OkxMessageConsumer {
         }
 
         PosSide posSide = strategy.decideSide(ticker);
-        if (posSide == null || !checkCostAndBalance(price))
+        if (posSide == null || !checkCostAndBalance(price, posSide))
             return;
 
         MartinOrders.instance().setPosSide(this.orderBatch, posSide);
@@ -208,8 +208,8 @@ public class Operator implements OkxMessageConsumer {
         return balance;
     }
 
-    private boolean checkCostAndBalance(double price) {
-        double totalCost = MartinOrders.instance().totalCost(price);
+    private boolean checkCostAndBalance(double price, PosSide posSide) {
+        double totalCost = MartinOrders.instance().totalCost(price, posSide);
         if (this.accountBalance < totalCost) {
             this.getAndSetBalance();
             if (this.accountBalance < totalCost) {
