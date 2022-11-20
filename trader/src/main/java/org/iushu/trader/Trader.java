@@ -67,6 +67,8 @@ public class Trader {
             throw new IllegalStateException("not in running");
 
         logger.warn("trader stopping");
+        this.wsClient.shutdown();
+        this.privateClient.shutdown();
         try {
             TimeUnit.SECONDS.sleep(3);
         } catch (InterruptedException e) {

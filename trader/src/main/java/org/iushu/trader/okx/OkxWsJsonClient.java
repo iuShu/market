@@ -2,8 +2,6 @@ package org.iushu.trader.okx;
 
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
-import org.iushu.trader.SyncControl;
-import org.iushu.trader.SyncController;
 import org.iushu.trader.websocket.MessageConsumer;
 import org.iushu.trader.websocket.WsJsonClient;
 import org.slf4j.Logger;
@@ -13,7 +11,7 @@ import javax.websocket.CloseReason;
 import javax.websocket.EndpointConfig;
 import java.util.concurrent.TimeUnit;
 
-public class OkxWsJsonClient extends WsJsonClient implements SyncControl {
+public class OkxWsJsonClient extends WsJsonClient {
 
     private static final Logger logger = LoggerFactory.getLogger(OkxWsJsonClient.class);
 
@@ -25,10 +23,6 @@ public class OkxWsJsonClient extends WsJsonClient implements SyncControl {
     public static final String KEY_EVENT = "event";
     public static final String KEY_ARG = "arg";
     public static final String KEY_DATA = "data";
-
-    public OkxWsJsonClient() {
-        SyncController.instance().register(this);
-    }
 
     @Override
     public String wsUrl() {
@@ -91,16 +85,6 @@ public class OkxWsJsonClient extends WsJsonClient implements SyncControl {
     @Override
     public void onClose(CloseReason closeReason) {
         logger.error("onClose {}", closeReason);
-    }
-
-    @Override
-    public void shutdown() {
-        SyncController.instance().shutdown();
-    }
-
-    @Override
-    public void syncShutdown() {
-        super.shutdown();
     }
 
 }

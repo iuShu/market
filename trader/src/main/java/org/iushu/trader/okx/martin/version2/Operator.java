@@ -2,6 +2,7 @@ package org.iushu.trader.okx.martin.version2;
 
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
+import org.iushu.trader.Trader;
 import org.iushu.trader.base.Constants;
 import org.iushu.trader.base.NotifyUtil;
 import org.iushu.trader.base.PosSide;
@@ -117,7 +118,7 @@ public class Operator implements OkxMessageConsumer {
                 logger.info("all position has been closed, reset closing");
             }
             this.getAndSetBalance();    // refresh balance
-            this.privateClient.shutdown();  // TODO dev test only
+            Trader.instance().stop();   // TODO dev test only
             coolingDown();
         }
 
@@ -162,7 +163,7 @@ public class Operator implements OkxMessageConsumer {
             return;
 
         double takeProfitPrice = MartinOrders.instance().takeProfitPrice(order);
-        debugPriceCheck(takeProfitPrice);
+//        debugPriceCheck(takeProfitPrice);
         for (Double price : this.prices) {
             if (!order.getPosSide().isProfit(takeProfitPrice, price))
                 return;
@@ -214,7 +215,7 @@ public class Operator implements OkxMessageConsumer {
             this.getAndSetBalance();
             if (this.accountBalance < totalCost) {
                 logger.warn("stop machine due to deficient balance for trading");
-                this.privateClient.shutdown();
+                Trader.instance().stop();
                 return false;
             }
         }
@@ -237,7 +238,7 @@ public class Operator implements OkxMessageConsumer {
         logger.warn("place first order failed by {}", message.toJSONString());
         if (this.failedTimes.getAndIncrement() >= Setting.OPERATION_MAX_FAILURE_TIMES) {
             logger.error("placing first order failed times reached threshold, shutdown program");
-            this.privateClient.shutdown();
+            Trader.instance().stop();
             return;
         }
         if (this.placing.get()) {

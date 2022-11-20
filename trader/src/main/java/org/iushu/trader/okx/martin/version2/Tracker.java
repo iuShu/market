@@ -2,6 +2,7 @@ package org.iushu.trader.okx.martin.version2;
 
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
+import org.iushu.trader.Trader;
 import org.iushu.trader.base.NotifyUtil;
 import org.iushu.trader.base.PosSide;
 import org.iushu.trader.okx.OkxHttpUtils;
@@ -102,13 +103,13 @@ public class Tracker implements OkxMessageConsumer {
                 break;
             case ORDER_STATE_CANCELED:
                 logger.info("canceled order {} pos={}", ordId, position);
-                Order filled = martinOrders.getOrder(position);
-                if (filled == null || martinOrders.openSide().equals(side)) {
+//                Order filled = martinOrders.getOrder(position);
+//                if (filled == null || martinOrders.openSide().equals(side)) {
 //                    logger.warn("canceled order not found, {} ", message.toJSONString());
-                    return;
-                }
-                filled.setState(state);
-                filled.setUpdateTime(update);
+//                    return;
+//                }
+//                filled.setState(state);
+//                filled.setUpdateTime(update);
                 break;
         }
     }
@@ -125,13 +126,13 @@ public class Tracker implements OkxMessageConsumer {
                     logger.info("sent {} next orders", orders.size());
                 else {
                     logger.error("send {} next orders failed", orders.size());
-                    this.client.shutdown();
+                    Trader.instance().stop();
                 }
                 operating.release();
             });
         } catch (Exception e) {
             logger.error("place all next error", e);
-            this.client.shutdown();
+            Trader.instance().stop();
             operating.release();
         }
     }
@@ -148,7 +149,7 @@ public class Tracker implements OkxMessageConsumer {
         String errorMsg = String.format("add margin error by %s %s", posSide.getName(), margin);
         logger.error(errorMsg);
         NotifyUtil.windowTipsAndVoice("Order Error", errorMsg);
-        this.client.shutdown();
+        Trader.instance().stop();
     }
 
     private void placeAlgoOrder() {
@@ -162,7 +163,7 @@ public class Tracker implements OkxMessageConsumer {
                     return;
                 }
                 logger.error("cancel prev algo failed times reached threshold, shutdown program");
-                this.client.shutdown();
+                Trader.instance().stop();
                 return;
             }
             this.failedTimes.set(0);
@@ -183,7 +184,7 @@ public class Tracker implements OkxMessageConsumer {
                 return;
             }
             logger.error("place algo failed times reached threshold, shutdown program");
-            this.client.shutdown();
+            Trader.instance().stop();
         }
         else {
             this.failedTimes.set(0);
@@ -239,7 +240,7 @@ public class Tracker implements OkxMessageConsumer {
             logger.error("{} operation failed by {}", op, message);
             if (this.failedTimes.getAndIncrement() >= Setting.OPERATION_MAX_FAILURE_TIMES) {
                 logger.error("{} failed times reached threshold, shutdown program", op);
-                this.client.shutdown();
+                Trader.instance().stop();
                 return;
             }
 
@@ -252,7 +253,7 @@ public class Tracker implements OkxMessageConsumer {
 
     private void resetBatch() {
         MartinOrders.instance().reset();
-        logger.info("reset order batch {}", MartinOrders.instance().getBatch());
+        logger.info("reset order to batch {}", MartinOrders.instance().getBatch());
         NotifyUtil.windowTipsAndVoice("Order Close", "Order batch " + MartinOrders.instance().getBatch() + " closed.");
     }
 

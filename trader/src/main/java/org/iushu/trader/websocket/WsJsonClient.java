@@ -186,7 +186,7 @@ public abstract class WsJsonClient {
 
     public void shutdown() {
         try {
-            logger.warn("shutdown ws client manually");
+            logger.warn("{} shutdown ws client manually", this.getClass().getName());
             this.reconnect = false;
             if (this.session != null && this.session.isOpen())
                 this.session.close();
