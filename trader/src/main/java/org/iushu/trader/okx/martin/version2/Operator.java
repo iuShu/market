@@ -118,7 +118,6 @@ public class Operator implements OkxMessageConsumer {
                 logger.info("all position has been closed, reset closing");
             }
             this.getAndSetBalance();    // refresh balance
-            Trader.instance().stop();   // TODO dev test only
             coolingDown();
         }
 

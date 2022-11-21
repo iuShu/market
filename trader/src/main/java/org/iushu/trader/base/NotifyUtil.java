@@ -4,7 +4,7 @@ import java.io.IOException;
 
 public class NotifyUtil {
 
-    public static final String VALVE_KEY = "notify.open";
+    public static final String VALVE_KEY = "notify.windows.open";
 
     public static void windowTips(String title, String message) {
         if (Configuration.getBoolean(VALVE_KEY))

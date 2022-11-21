@@ -199,6 +199,8 @@ public class MartinOrders {
 
     public Order getOrder(int position) {
         Integer idx = this.posToIdx.get(position);
+        if (idx == null)
+            return null;
         Order order = this.orders.get(idx);
         checkValidOrders(order);
         return order;
