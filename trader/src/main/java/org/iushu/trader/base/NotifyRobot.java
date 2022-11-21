@@ -118,15 +118,6 @@ public class NotifyRobot {
         sendMarkdown("FATAL", content);
     }
 
-    public static String messageTemplate() {
-        return "#### **Order Filled**\n----\n" +
-                "> - 10 16590.1 **Fill** " + currentTime().substring(5) + "\n" +
-                "> - 20 16258.2 live\n" +
-                "> - 40 15926.4 live\n" +
-                "> - 80 15428.7 live\n" +
-                "\n*tp=19283.4 sl=20129.87*\n\n----\n" + currentTime();
-    }
-
     public static String currentTime() {
         return formatTimestamp(System.currentTimeMillis());
     }
