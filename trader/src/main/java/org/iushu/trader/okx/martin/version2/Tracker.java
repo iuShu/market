@@ -74,8 +74,15 @@ public class Tracker implements OkxMessageConsumer {
                 break;
             case ORDER_STATE_FILLED:
                 if (martinOrders.closeSide().equals(side)) {
-                    logger.warn("received close order");
+                    logger.debug("received close order");
                     cancelAllPendingOrders();
+                    double pnl = message.getDoubleValue("pnl");
+                    if (pnl < 0) {
+                        String fatalMsg = String.format("[%s] orders lost %s", MartinOrders.instance().getBatch(), pnl);
+                        logger.error(fatalMsg);
+                        NotifyRobot.sendFatal(fatalMsg);
+                        Trader.instance().stop();
+                    }
                     return;
                 }
 
@@ -204,7 +211,7 @@ public class Tracker implements OkxMessageConsumer {
             Collection<Order> orders = MartinOrders.instance().allOrders();
             List<Order> lives = orders.stream().filter(o -> ORDER_STATE_LIVE.equals(o.getState())).collect(Collectors.toList());
             if (lives.isEmpty()) {
-                logger.warn("all orders[{}] has been filled", MartinOrders.instance().getBatch());
+                logger.warn("[{}] no orders to cancel", MartinOrders.instance().getBatch());
                 resetBatch();
                 return;
             }

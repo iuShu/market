@@ -4,10 +4,8 @@ import org.iushu.trader.base.DefaultExecutor;
 import org.iushu.trader.okx.OkxPrivateWsJsonClient;
 import org.iushu.trader.okx.OkxWsJsonClient;
 import org.iushu.trader.okx.Setting;
-import org.iushu.trader.okx.martin.Authenticator;
-import org.iushu.trader.okx.martin.MAStrategy;
-import org.iushu.trader.okx.martin.Operator;
-import org.iushu.trader.okx.martin.RealOperatorTest;
+import org.iushu.trader.okx.martin.version2.RealOperatorTest;
+import org.iushu.trader.okx.martin.version2.EMAStrategy;
 import org.iushu.trader.websocket.WsJsonClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,7 +28,7 @@ public class RealTraderTest {
     private RealTraderTest() {
         logger.info("running at {} env", Setting.ENV.toUpperCase());
 
-        MAStrategy strategy = new MAStrategy();
+        EMAStrategy strategy = new EMAStrategy();
         RealOperatorTest operator = new RealOperatorTest(strategy);
 
         wsClient.register(strategy);
@@ -64,6 +62,7 @@ public class RealTraderTest {
             throw new IllegalStateException("not in running");
 
         logger.warn("trader stopping");
+        this.wsClient.shutdown();
         try {
             TimeUnit.SECONDS.sleep(3);
         } catch (InterruptedException e) {
