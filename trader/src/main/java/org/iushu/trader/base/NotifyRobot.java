@@ -1,6 +1,5 @@
 package org.iushu.trader.base;
 
-import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -22,19 +21,18 @@ import javax.crypto.spec.SecretKeySpec;
 import javax.net.ssl.SSLContext;
 import java.io.IOException;
 import java.net.URLEncoder;
+import java.time.Instant;
 import java.time.LocalDateTime;
-import java.time.ZoneOffset;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Base64;
-import java.util.Date;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.http.HttpHeaders.CONTENT_TYPE;
-import static org.apache.http.entity.ContentType.APPLICATION_JSON;
 
-public class DingTalkRobot {
+public class NotifyRobot {
 
-    private static final Logger logger = LoggerFactory.getLogger(DingTalkRobot.class);
+    private static final Logger logger = LoggerFactory.getLogger(NotifyRobot.class);
 
     private static HttpClient httpClient;
     private static RequestConfig requestConfig;
@@ -81,49 +79,75 @@ public class DingTalkRobot {
         return URLEncoder.encode(new String(Base64.getEncoder().encode(bytes), UTF_8));
     }
 
-    public static void sendText(String content) {
-        if (!Configuration.getBoolean("notify.dingtalk.open"))
+    private static void send(JSONObject message) {
+        if (message == null || message.isEmpty() || !Configuration.getBoolean("notify.robot.open"))
             return;
 
-//        JSONObject text = JSONObject.of("content", String.format("%s %s", content, currentTime()));
-//        JSONObject body = JSONObject.of("msgtype", "text", "text", text);
-
-        String actionUrl = "";
-//        String okxAppUrl = "okex://main";
-        JSONObject markdown = JSONObject.of("title", "Order Filled", "text", markDown()
-        , "btnOrientation", "0", "btns", JSONArray.of(JSONObject.of("title", "Details(okx)", "actionURL", actionUrl)));
-        JSONObject body = JSONObject.of("msgtype", "actionCard", "actionCard", markdown);
-        logger.info(markdown.toJSONString());
-
         try {
-            String webhook = Configuration.getString("dingtalk.webhook");
-            String secret = Configuration.getString("dingtalk.secret");
+            logger.debug("robot send {}", message.toJSONString());
+            String webhook = Configuration.getString("notify.robot.webhook");
+            String secret = Configuration.getString("notify.robot.secret");
             long timestamp = System.currentTimeMillis();
             String signature = hmac(timestamp, secret);
             String url = String.format("%s&timestamp=%s&sign=%s", webhook, timestamp, signature);
-            post(url, body);
+            post(url, message);
         } catch (Exception e) {
             logger.error("send text error", e);
         }
     }
 
-    public static String markDown() {
-        return "#### Order Filled\n" +
-                "- 10 16590.1 **FILLED** 2022-11-21 11:36:12.445\n" +
-                "- 20 16258.2 live\n" +
-                "- 40 15926.4 live\n" +
-                "- 80 15428.7 live\n" +
-                "\n*tp=19283.4 sl=20129.87*\n" +
-                "> " + currentTime();
+    /**
+     * first order has been filled (more detailed) <br>
+     * follow orders has been filled <br>
+     * order has been closed <br>
+     * trader shutdown <br>
+     */
+    public static void sendText(String content) {
+        JSONObject text = JSONObject.of("content", String.format("%s %s", content, currentTime()));
+        JSONObject message = JSONObject.of("msgtype", "text", "text", text);
+        send(message);
     }
 
-    private static String currentTime() {
+    public static void sendMarkdown(String title, String content) {
+        JSONObject markdown = JSONObject.of("title", title, "text", content + "\n\n----\n" + currentTime());
+        JSONObject message = JSONObject.of("msgtype", "markdown", "markdown", markdown);
+        send(message);
+    }
+
+    public static void sendFatal(String content) {
+        sendMarkdown("FATAL", content);
+    }
+
+    public static String messageTemplate() {
+        return "#### **Order Filled**\n----\n" +
+                "> - 10 16590.1 **Fill** " + currentTime().substring(5) + "\n" +
+                "> - 20 16258.2 live\n" +
+                "> - 40 15926.4 live\n" +
+                "> - 80 15428.7 live\n" +
+                "\n*tp=19283.4 sl=20129.87*\n\n----\n" + currentTime();
+    }
+
+    public static String currentTime() {
+        return formatTimestamp(System.currentTimeMillis());
+    }
+
+    public static String formatTimestamp(long timestamp) {
+        Instant instant = Long.toString(timestamp).length() == 10 ? Instant.ofEpochSecond(timestamp) : Instant.ofEpochMilli(timestamp);
+        LocalDateTime time = LocalDateTime.ofInstant(instant, ZoneId.systemDefault());
+        return time.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+    }
+
+    public static String periodDesc(long timestamp) {
+        Instant instant = Long.toString(timestamp).length() == 10 ? Instant.ofEpochSecond(timestamp) : Instant.ofEpochMilli(timestamp);
+        LocalDateTime time = LocalDateTime.ofInstant(instant, ZoneId.systemDefault());
         LocalDateTime now = LocalDateTime.now();
-        return now.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS"));
+        int period = now.getDayOfYear() - time.getDayOfYear();
+        String desc = period == 0 ? "" : (period + "d ");
+        return desc + time.format(DateTimeFormatter.ofPattern("HH:mm:ss"));
     }
 
     public static void main(String[] args) throws Exception {
-        sendText("");
+//        sendText("");
     }
 
 }

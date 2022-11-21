@@ -4,6 +4,7 @@ import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import org.iushu.trader.Trader;
 import org.iushu.trader.base.Constants;
+import org.iushu.trader.base.NotifyRobot;
 import org.iushu.trader.base.NotifyUtil;
 import org.iushu.trader.base.PosSide;
 import org.iushu.trader.okx.*;
@@ -214,6 +215,7 @@ public class Operator implements OkxMessageConsumer {
             this.getAndSetBalance();
             if (this.accountBalance < totalCost) {
                 logger.warn("stop machine due to deficient balance for trading");
+                NotifyRobot.sendFatal(String.format("%s %s deficient balance", totalCost, this.accountBalance));
                 Trader.instance().stop();
                 return false;
             }
@@ -237,6 +239,7 @@ public class Operator implements OkxMessageConsumer {
         logger.warn("place first order failed by {}", message.toJSONString());
         if (this.failedTimes.getAndIncrement() >= Setting.OPERATION_MAX_FAILURE_TIMES) {
             logger.error("placing first order failed times reached threshold, shutdown program");
+            NotifyRobot.sendFatal("place first order failed");
             Trader.instance().stop();
             return;
         }

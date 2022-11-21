@@ -3,7 +3,7 @@ package org.iushu.trader.okx.martin.version2;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import org.iushu.trader.Trader;
-import org.iushu.trader.base.NotifyUtil;
+import org.iushu.trader.base.NotifyRobot;
 import org.iushu.trader.base.PosSide;
 import org.iushu.trader.okx.OkxHttpUtils;
 import org.iushu.trader.okx.OkxMessageConsumer;
@@ -99,7 +99,7 @@ public class Tracker implements OkxMessageConsumer {
                 placeAlgoOrder();
                 if (martinOrders.isLastOrder(live))
                     logger.warn("last order has been filled at {} {}", live.getPrice(), position);
-                NotifyUtil.windowTipsAndVoice("Order Filled", "Order filled, price " + live.getPrice() + ", position " + position);
+                this.notifyOrderFilled();
                 break;
             case ORDER_STATE_CANCELED:
                 logger.info("canceled order {} pos={}", ordId, position);
@@ -125,13 +125,16 @@ public class Tracker implements OkxMessageConsumer {
                 if (r.isOK())
                     logger.info("sent {} next orders", orders.size());
                 else {
-                    logger.error("send {} next orders failed", orders.size());
+                    String fatalMsg = String.format("send %s next orders failed", orders.size());
+                    logger.error(fatalMsg);
+                    NotifyRobot.sendFatal(fatalMsg);
                     Trader.instance().stop();
                 }
                 operating.release();
             });
         } catch (Exception e) {
             logger.error("place all next error", e);
+            NotifyRobot.sendFatal("place all next order error");
             Trader.instance().stop();
             operating.release();
         }
@@ -148,7 +151,7 @@ public class Tracker implements OkxMessageConsumer {
         }
         String errorMsg = String.format("add margin error by %s %s", posSide.getName(), margin);
         logger.error(errorMsg);
-        NotifyUtil.windowTipsAndVoice("Order Error", errorMsg);
+        NotifyRobot.sendFatal(errorMsg);
         Trader.instance().stop();
     }
 
@@ -163,6 +166,7 @@ public class Tracker implements OkxMessageConsumer {
                     return;
                 }
                 logger.error("cancel prev algo failed times reached threshold, shutdown program");
+                NotifyRobot.sendFatal("cancel prev algo order failed");
                 Trader.instance().stop();
                 return;
             }
@@ -184,6 +188,7 @@ public class Tracker implements OkxMessageConsumer {
                 return;
             }
             logger.error("place algo failed times reached threshold, shutdown program");
+            NotifyRobot.sendFatal("place algo order failed");
             Trader.instance().stop();
         }
         else {
@@ -211,7 +216,7 @@ public class Tracker implements OkxMessageConsumer {
                     logger.info("sent cancel orders");
                 else {
                     logger.error("send cancel orders failed", r.getException());
-                    NotifyUtil.windowTips("Order Close", "sent cancel orders failed by " + r.getException().getMessage());
+                    NotifyRobot.sendText("send cancel orders failed by " + r.getException().getMessage());
                 }
             });
         } catch (Exception e) {
@@ -239,7 +244,9 @@ public class Tracker implements OkxMessageConsumer {
         else {
             logger.error("{} operation failed by {}", op, message);
             if (this.failedTimes.getAndIncrement() >= Setting.OPERATION_MAX_FAILURE_TIMES) {
-                logger.error("{} failed times reached threshold, shutdown program", op);
+                String fatalMsg = String.format("%s failed times reached threshold, shutdown program", op);
+                logger.error(fatalMsg);
+                NotifyRobot.sendFatal(fatalMsg);
                 Trader.instance().stop();
                 return;
             }
@@ -254,7 +261,22 @@ public class Tracker implements OkxMessageConsumer {
     private void resetBatch() {
         MartinOrders.instance().reset();
         logger.info("reset order to batch {}", MartinOrders.instance().getBatch());
-        NotifyUtil.windowTipsAndVoice("Order Close", "Order batch " + MartinOrders.instance().getBatch() + " closed.");
+        NotifyRobot.sendMarkdown("Order Reset", "order batch " + MartinOrders.instance().getBatch() + " closed");
+    }
+
+    private void notifyOrderFilled() {
+        StringBuilder content = new StringBuilder("#### **Order Filled**\n----\n");
+        MartinOrders.instance().allOrders().forEach(o -> {
+            String desc = o.getState() + "\n";
+            if (ORDER_STATE_FILLED.equals(o.getState()))
+                desc = "**F** " + NotifyRobot.periodDesc(o.getUpdateTime()) + "\n";
+            content.append(String.format("> - %d %s %s", o.getPosition(), o.getPrice(), desc));
+        });
+        Order current = MartinOrders.instance().current();
+        double tpPx = MartinOrders.instance().takeProfitPrice(current);
+        double slPx = MartinOrders.instance().stopLossPrice();
+        content.append(String.format("\n*tp=%s sl=%s*", tpPx, slPx));
+        NotifyRobot.sendMarkdown("Order Filled", content.toString());
     }
 
     private void acquireSemaphore() {
