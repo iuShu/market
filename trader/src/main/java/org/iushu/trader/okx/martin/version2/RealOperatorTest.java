@@ -105,12 +105,12 @@ public class RealOperatorTest implements OkxMessageConsumer {
                 return;
             }
 
-            logger.info("placed [{}]first order at {} pos={}", this.orderBatch, latestPrice, first.getPosition());
+            logger.info("[{}] placed first order {} {} {}", this.orderBatch, first.getPosition(), latestPrice, first.getPosSide());
             first.setPrice(latestPrice);
             MartinOrders.instance().calcOrdersPrice();
             filledOrder(first, latestPrice);
             MartinOrders.instance().allOrders().stream().filter(order -> order.getPosition() != first.getPosition())
-                .forEach(order -> logger.info("placed [{}]follow order with {} {}", this.orderBatch, order.getPosition(), order.getPrice()));
+                .forEach(order -> logger.info("[{}] placed follow order with {} {}", this.orderBatch, order.getPosition(), order.getPrice()));
         } catch (Exception e) {
             logger.error("place first order error", e);
         }
@@ -138,7 +138,7 @@ public class RealOperatorTest implements OkxMessageConsumer {
             if (MartinOrders.instance().getOrder(order.getPosition()) != order)  // reconfirm
                 return;     // could be closed by other thread
 
-            logger.info("sent close orders");
+            logger.info("placed close orders");
             logger.info("sent cancel orders");
 
             MartinOrders.instance().reset();
@@ -164,13 +164,13 @@ public class RealOperatorTest implements OkxMessageConsumer {
     private void checkNextOrderFilled(double price) {
         Order current = MartinOrders.instance().current();
         Order order = MartinOrders.instance().getOrder(current.getPosition() * 2);
-        double stopLossPrice = order == null ? MartinOrders.instance().nextOrderPrice(current) : order.getPrice();
-        if (Setting.POS_SIDE.isLoss(stopLossPrice, price)) {
+        double stopLossPrice = order == null ? MartinOrders.instance().stopLossPrice() : order.getPrice();
+        if (current.getPosSide().isLoss(stopLossPrice, price)) {
             if (order != null)
                 filledOrder(order, price);
             else {
                 MartinOrders.instance().reset();
-                logger.warn("Martin[{}] FAILED at px={} with last={}, {}", this.orderBatch, price, current.getPosition(), current.getPrice());
+                logger.warn("[{}] Martin FAILED at px={} with last={}, {}", this.orderBatch, price, current.getPosition(), current.getPrice());
                 this.client.shutdown();
             }
         }
@@ -180,12 +180,13 @@ public class RealOperatorTest implements OkxMessageConsumer {
         if (filled.getState().equals(Constants.ORDER_STATE_FILLED))
             return;
 
-        MartinOrders.instance().setCurrent(filled);
+        MartinOrders instance = MartinOrders.instance();
+        instance.setCurrent(filled);
         filled.setOrderId(Long.toString(System.currentTimeMillis()));
         filled.setState(Constants.ORDER_STATE_FILLED);
         filled.setPrice(filledPrice);
-        logger.info("[{}]order has been filled at {} with {} tp={}", this.orderBatch, filledPrice,
-                filled.getPosition(), MartinOrders.instance().takeProfitPrice(filled));
+        logger.info("[{}] order has been filled {} {} tp={}, sl={}", this.orderBatch, filled.getPosition(),
+                filledPrice, instance.takeProfitPrice(filled), instance.stopLossPrice());
     }
 
     private void debugPriceCheck(double takeProfitPrice) {
