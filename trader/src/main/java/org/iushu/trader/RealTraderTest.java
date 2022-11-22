@@ -23,7 +23,6 @@ public class RealTraderTest {
     private static final RealTraderTest INSTANCE = new RealTraderTest();
 
     private WsJsonClient wsClient = new OkxWsJsonClient();
-    private OkxPrivateWsJsonClient privateClient = new OkxPrivateWsJsonClient();
 
     private RealTraderTest() {
         logger.info("running at {} env", Setting.ENV.toUpperCase());
@@ -70,8 +69,8 @@ public class RealTraderTest {
         }
         DefaultExecutor.executor().shutdown();
         DefaultExecutor.scheduler().shutdown();
-        if (control.getCount() > 0)
-            control.countDown();
+        logger.debug("trader count {}", control.getCount());
+        control.countDown();
         logger.warn("trader stopped");
     }
 

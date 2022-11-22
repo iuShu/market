@@ -2,6 +2,7 @@ package org.iushu.trader.okx.martin.version2;
 
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
+import org.iushu.trader.RealTraderTest;
 import org.iushu.trader.base.Constants;
 import org.iushu.trader.base.PosSide;
 import org.iushu.trader.okx.OkxMessageConsumer;
@@ -171,7 +172,6 @@ public class RealOperatorTest implements OkxMessageConsumer {
             else {
                 MartinOrders.instance().reset();
                 logger.warn("[{}] Martin FAILED at px={} with last={}, {}", this.orderBatch, price, current.getPosition(), current.getPrice());
-                this.client.shutdown();
             }
         }
     }
