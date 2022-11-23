@@ -1,0 +1,5 @@
+.idea/
+src/test/*
+target/
+logs/
+*.iml

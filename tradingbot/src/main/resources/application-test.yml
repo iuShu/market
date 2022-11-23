@@ -1,0 +1,15 @@
+trade:
+  okx:
+    api: https://www.okx.com
+    wsPublicUrl: wss://wspap.okx.com:8443/ws/v5/public?brokerId=9999
+    wsPrivateUrl: wss://wspap.okx.com:8443/ws/v5/private?brokerId=9999
+    apiKey:
+    secret:
+    passphrase:
+  bnb:
+    api:
+    wsPublicUrl:
+    wsPrivateUrl:
+    apiKey:
+    secert:
+    passphrase:

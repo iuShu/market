@@ -1,0 +1,19 @@
+spring:
+  profiles:
+    active: test,okx
+  main:
+    web-application-type: none
+
+logging:
+  level:
+    root: debug
+
+trade:
+  exchange: okx
+  currency: USDT
+
+  notify:
+    windows: false
+    robot: false
+    webhook:
+    secret:
