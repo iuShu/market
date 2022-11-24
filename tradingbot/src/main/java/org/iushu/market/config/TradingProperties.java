@@ -12,6 +12,10 @@ public class TradingProperties {
 
     private String exchange;
     private String currency;
+    private String instId;
+    private String tdMode;
+    private int lever;
+    private long heartbeatPeriod = 20000;   // millisecond
 
     private final TradingProperties.Okx okx = new TradingProperties.Okx();
     private final TradingProperties.Bnb bnb = new TradingProperties.Bnb();
@@ -243,6 +247,38 @@ public class TradingProperties {
 
     public void setCurrency(String currency) {
         this.currency = currency;
+    }
+
+    public String getInstId() {
+        return instId;
+    }
+
+    public void setInstId(String instId) {
+        this.instId = instId;
+    }
+
+    public String getTdMode() {
+        return tdMode;
+    }
+
+    public void setTdMode(String tdMode) {
+        this.tdMode = tdMode;
+    }
+
+    public int getLever() {
+        return lever;
+    }
+
+    public void setLever(int lever) {
+        this.lever = lever;
+    }
+
+    public long getHeartbeatPeriod() {
+        return heartbeatPeriod;
+    }
+
+    public void setHeartbeatPeriod(long heartbeatPeriod) {
+        this.heartbeatPeriod = heartbeatPeriod;
     }
 
     public TradingProperties.ApiInfo getOkx() {

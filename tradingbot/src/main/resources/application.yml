@@ -1,6 +1,6 @@
 spring:
   profiles:
-    active: test,okx
+    active: test, ${trade.exchange}
   main:
     web-application-type: none
 
@@ -11,6 +11,9 @@ logging:
 trade:
   exchange: okx
   currency: USDT
+  instId: BTC-${trade.currency}-SWAP
+  tdMode: isolated
+  lever: 50
 
   notify:
     windows: false
