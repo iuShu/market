@@ -17,6 +17,7 @@ public class TradingProperties {
     private int lever;
     private long heartbeatPeriod = 20000;   // millisecond
 
+    private final TradingProperties.Notify notify = new TradingProperties.Notify();
     private final TradingProperties.Okx okx = new TradingProperties.Okx();
     private final TradingProperties.Bnb bnb = new TradingProperties.Bnb();
 
@@ -24,8 +25,8 @@ public class TradingProperties {
 
         private boolean windows;
         private boolean robot;
-        private boolean webhook;
-        private boolean secret;
+        private String webhook;
+        private String secret;
 
         public boolean isWindows() {
             return windows;
@@ -43,19 +44,19 @@ public class TradingProperties {
             this.robot = robot;
         }
 
-        public boolean isWebhook() {
+        public String getWebhook() {
             return webhook;
         }
 
-        public void setWebhook(boolean webhook) {
+        public void setWebhook(String webhook) {
             this.webhook = webhook;
         }
 
-        public boolean isSecret() {
+        public String getSecret() {
             return secret;
         }
 
-        public void setSecret(boolean secret) {
+        public void setSecret(String secret) {
             this.secret = secret;
         }
     }
@@ -279,6 +280,10 @@ public class TradingProperties {
 
     public void setHeartbeatPeriod(long heartbeatPeriod) {
         this.heartbeatPeriod = heartbeatPeriod;
+    }
+
+    public Notify getNotify() {
+        return notify;
     }
 
     public TradingProperties.ApiInfo getOkx() {
