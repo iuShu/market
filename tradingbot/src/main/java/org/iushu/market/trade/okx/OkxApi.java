@@ -1,4 +1,4 @@
-package org.iushu.market.trade;
+package org.iushu.market.trade.okx;
 
 public interface OkxApi {
 

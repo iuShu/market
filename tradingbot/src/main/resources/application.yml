@@ -8,6 +8,9 @@ logging:
   level:
     root: debug
 
+websocket:
+  reconnectTime: 5
+
 trade:
   exchange: okx
   currency: USDT

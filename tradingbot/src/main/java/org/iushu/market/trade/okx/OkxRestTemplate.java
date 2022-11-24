@@ -1,4 +1,4 @@
-package org.iushu.market.trade;
+package org.iushu.market.trade.okx;
 
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
