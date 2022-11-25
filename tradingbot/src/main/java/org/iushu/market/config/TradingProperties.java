@@ -12,7 +12,9 @@ public class TradingProperties {
 
     private String exchange;
     private String currency;
+    private String inst;
     private String instId;
+    private String instType;
     private String tdMode;
     private int lever;
     private long heartbeatPeriod = 20000;   // millisecond
@@ -256,6 +258,22 @@ public class TradingProperties {
 
     public void setInstId(String instId) {
         this.instId = instId;
+    }
+
+    public String getInst() {
+        return inst;
+    }
+
+    public void setInst(String inst) {
+        this.inst = inst;
+    }
+
+    public String getInstType() {
+        return instType;
+    }
+
+    public void setInstType(String instType) {
+        this.instType = instType;
     }
 
     public String getTdMode() {

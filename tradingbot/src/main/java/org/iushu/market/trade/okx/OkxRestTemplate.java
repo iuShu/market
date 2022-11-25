@@ -7,13 +7,13 @@ import org.iushu.market.Constants;
 import org.iushu.market.component.JSONArrayAdapter;
 import org.iushu.market.component.Signature;
 import org.iushu.market.config.TradingProperties;
+import org.iushu.market.trade.okx.config.OkxComponent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
-import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
@@ -23,8 +23,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-@Service
-@Profile(Constants.EXChANGE_OKX)
+@OkxComponent
 public class OkxRestTemplate {
 
     private static final Logger logger = LoggerFactory.getLogger(OkxRestTemplate.class);
@@ -77,8 +76,8 @@ public class OkxRestTemplate {
         JSONObject body = JSONObject.of("instId", properties.getInstId());
         body.put("bar", bar);
         body.put("limit", Integer.toString(limit));
-        HttpEntity<JSONObject> entity = entity(HttpMethod.GET, OkxApi.GET_CANDLE_HISTORY, body);
-        JSONObject response = get(OkxApi.GET_CANDLE_HISTORY, entity);
+        HttpEntity<JSONObject> entity = entity(HttpMethod.GET, OkxConstants.GET_CANDLE_HISTORY, body);
+        JSONObject response = get(OkxConstants.GET_CANDLE_HISTORY, entity);
         if (checkResp(response, "get candle history"))
             return response.getJSONArray("data");
         return JSONArray.of();
@@ -86,8 +85,8 @@ public class OkxRestTemplate {
 
     public JSONArray getLeverage() {
         JSONObject body = JSONObject.of("instId", properties.getInstId(), "mgnMode", properties.getTdMode());
-        HttpEntity<JSONObject> entity = entity(HttpMethod.GET, OkxApi.GET_LEVER, body);
-        JSONObject response = get(OkxApi.GET_LEVER, entity);
+        HttpEntity<JSONObject> entity = entity(HttpMethod.GET, OkxConstants.GET_LEVER, body);
+        JSONObject response = get(OkxConstants.GET_LEVER, entity);
         if (checkResp(response, "get leverage"))
             return response.getJSONArray("data");
         return JSONArray.of();
@@ -95,8 +94,8 @@ public class OkxRestTemplate {
 
     public boolean cancelAlgoOrder(String algoOrderId) {
         JSONObject data = JSONObject.of("instId", properties.getInstId(), "algoId", algoOrderId);
-        HttpEntity<JSONObject> entity = entity(HttpMethod.POST, OkxApi.CANCEL_ALGO, JSONArrayAdapter.of(data));
-        JSONObject response = post(OkxApi.CANCEL_ALGO, entity);
+        HttpEntity<JSONObject> entity = entity(HttpMethod.POST, OkxConstants.CANCEL_ALGO, JSONArrayAdapter.of(data));
+        JSONObject response = post(OkxConstants.CANCEL_ALGO, entity);
         return checkResp(response, "cancel algo order");
     }
 

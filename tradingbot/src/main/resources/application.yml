@@ -13,8 +13,10 @@ websocket:
 
 trade:
   exchange: okx
+  inst: BTC
   currency: USDT
-  instId: BTC-${trade.currency}-SWAP
+  instType: SWAP
+  instId: ${trade.inst}-${trade.currency}-${trade.instType}
   tdMode: isolated
   lever: 50
 

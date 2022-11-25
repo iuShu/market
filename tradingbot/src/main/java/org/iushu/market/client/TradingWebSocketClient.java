@@ -23,18 +23,16 @@ public class TradingWebSocketClient extends StandardWebSocketClient {
 
     private static final Logger logger = LoggerFactory.getLogger(TradingWebSocketClient.class);
 
+    private String wsUrl;
     private TaskScheduler taskScheduler;
     private TradingProperties properties;
-
     private WebSocketSession session;
+    private WebSocketHandler webSocketHandler;
     private ScheduledFuture<?> heartbeatFuture;
     private TradingWebSocketClient.HeartbeatTask heartbeatTask;
 
-    public TradingWebSocketClient(TaskScheduler taskScheduler, TradingProperties properties) {
-        Assert.notNull(taskScheduler, "required task scheduler");
-        Assert.notNull(properties, "required trading properties");
-        this.taskScheduler = taskScheduler;
-        this.properties = properties;
+    public ListenableFuture<WebSocketSession> doHandshake() {
+        return doHandshake(this.webSocketHandler, wsUrl);
     }
 
     @Override
@@ -57,6 +55,26 @@ public class TradingWebSocketClient extends StandardWebSocketClient {
         else
             afterConnected.run();
         return doHandshake;
+    }
+
+    public void setWsUrl(String wsUrl) {
+        this.wsUrl = wsUrl;
+    }
+
+    public void setProperties(TradingProperties properties) {
+        this.properties = properties;
+    }
+
+    public void setTaskScheduler(TaskScheduler taskScheduler) {
+        this.taskScheduler = taskScheduler;
+    }
+
+    public void setWebSocketHandler(WebSocketHandler webSocketHandler) {
+        this.webSocketHandler = webSocketHandler;
+    }
+
+    public WebSocketHandler getWebSocketHandler() {
+        return webSocketHandler;
     }
 
     private void scheduleHeartbeat() {
