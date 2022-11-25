@@ -25,7 +25,6 @@ import static org.iushu.market.trade.CalculateUtils.*;
 import static org.iushu.market.trade.okx.OkxConstants.CANDLE_PERIOD_MILLISECONDS;
 
 @OkxComponent
-@ConditionalOnMissingBean(Strategy.class)
 public class EMAStrategy implements Strategy<Double> {
 
     private static final Logger logger = LoggerFactory.getLogger(EMAStrategy.class);
@@ -44,7 +43,7 @@ public class EMAStrategy implements Strategy<Double> {
         this.restTemplate = restTemplate;
     }
 
-    @PostConstruct
+//    @PostConstruct
     public void prepare() {
         JSONArray history = restTemplate.getCandleHistory(OkxConstants.CANDLE_BAR, MAX_REPO_ELEMENTS);
         if (history.isEmpty()) {

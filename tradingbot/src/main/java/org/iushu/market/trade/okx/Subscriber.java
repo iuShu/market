@@ -20,4 +20,8 @@ public class Subscriber {
         return handleMethod;
     }
 
+    @Override
+    public String toString() {
+        return String.format("subscriber=%s, method=%s", subscriber.getClass().getName(), handleMethod.getName());
+    }
 }

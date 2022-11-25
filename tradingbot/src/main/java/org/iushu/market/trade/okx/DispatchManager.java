@@ -10,9 +10,7 @@ import org.iushu.market.trade.okx.config.OkxComponent;
 import org.iushu.market.trade.okx.config.SubscribeChannel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.BeansException;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.ApplicationContextAware;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.io.Resource;
@@ -33,7 +31,7 @@ import java.util.stream.Collectors;
 import static org.iushu.market.trade.okx.OkxConstants.*;
 
 @OkxComponent
-public class DispatchManager implements ApplicationContextAware {
+public class DispatchManager {
 
     private static final Logger logger = LoggerFactory.getLogger(DispatchManager.class);
 
@@ -177,10 +175,10 @@ public class DispatchManager implements ApplicationContextAware {
         return PacketUtils.subscribePacket(subscribingChannels);
     }
 
-    @Override
-    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+    @EventListener(ApplicationReadyEvent.class)
+    public void scanSubscriber(ApplicationReadyEvent readyEvent) {
         try {
-            this.applicationContext = (ConfigurableApplicationContext) applicationContext;
+            this.applicationContext = readyEvent.getApplicationContext();
             ResourcePatternResolver resolver = ResourcePatternUtils.getResourcePatternResolver(applicationContext);
             MetadataReaderFactory factory = new CachingMetadataReaderFactory(resolver);
             Resource[] resources = resolver.getResources("classpath:**/*.class");
@@ -202,12 +200,15 @@ public class DispatchManager implements ApplicationContextAware {
                         Arrays.stream(annotation.op()).filter(o -> !o.equals(""))
                                 .forEach(op -> operations.computeIfAbsent(op, k -> new ArrayList<>()).add(subscriber));
                         Arrays.stream(annotation.event()).filter(e -> !e.equals(""))
-                                .forEach(event -> operations.computeIfAbsent(event, k -> new ArrayList<>()).add(subscriber));
+                                .forEach(event -> events.computeIfAbsent(event, k -> new ArrayList<>()).add(subscriber));
                         Arrays.stream(annotation.channel()).filter(c -> !c.equals(""))
-                                .forEach(channel -> operations.computeIfAbsent(channel, k -> new ArrayList<>()).add(subscriber));
+                                .forEach(channel -> channels.computeIfAbsent(channel, k -> new ArrayList<>()).add(subscriber));
                     });
                 });
             }
+//            operations.forEach((k, v) -> System.out.println(k + " " + v));
+//            events.forEach((k, v) -> System.out.println(k + " " + v));
+//            channels.forEach((k, v) -> System.out.println(k + " " + v));
         } catch (Exception e) {
             logger.error("load subscribing method error", e);
             System.exit(1);
