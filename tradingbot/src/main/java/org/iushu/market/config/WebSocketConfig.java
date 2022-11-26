@@ -11,6 +11,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.task.AsyncListenableTaskExecutor;
+import org.springframework.core.task.TaskExecutor;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.client.WebSocketClient;
@@ -24,7 +25,7 @@ public class WebSocketConfig {
     private TradingProperties.ApiInfo apiInfo;
     private WebSocketProperties webSocketProperties;
     private TaskScheduler taskScheduler;
-    private AsyncListenableTaskExecutor taskExecutor;
+    private TaskExecutor taskExecutor;
 
     @Bean
     public WebSocketClient publicClient() {
@@ -32,9 +33,8 @@ public class WebSocketConfig {
         webSocketClient.setWsUrl(apiInfo.getWsPublicUrl());
         webSocketClient.setProperties(properties);
         webSocketClient.setTaskScheduler(taskScheduler);
-        webSocketClient.setTaskExecutor(taskExecutor);
+        webSocketClient.setTaskExecutor((AsyncListenableTaskExecutor) taskExecutor);
         webSocketClient.setWebSocketHandler(channelHandler());
-//        webSocketClient.doHandshake(channelHandler(), this.apiInfo.getWsPublicUrl());
         return webSocketClient;
     }
 
@@ -47,12 +47,11 @@ public class WebSocketConfig {
     @Profile(Constants.EXChANGE_OKX)
     public WebSocketClient privateClient() {
         TradingWebSocketClient webSocketClient = new TradingWebSocketClient();
-        webSocketClient.setWsUrl(apiInfo.getWsPublicUrl());
+        webSocketClient.setWsUrl(apiInfo.getWsPrivateUrl());
         webSocketClient.setProperties(properties);
         webSocketClient.setTaskScheduler(taskScheduler);
-        webSocketClient.setTaskExecutor(taskExecutor);
+        webSocketClient.setTaskExecutor((AsyncListenableTaskExecutor) taskExecutor);
         webSocketClient.setWebSocketHandler(privateChannelHandler());
-//        webSocketClient.doHandshake(privateChannelHandler(), this.apiInfo.getWsPrivateUrl());
         return webSocketClient;
     }
 
@@ -66,8 +65,7 @@ public class WebSocketConfig {
     public void connect(ApplicationReadyEvent event) {
         ConfigurableApplicationContext context = event.getApplicationContext();
         Map<String, TradingWebSocketClient> clients = context.getBeansOfType(TradingWebSocketClient.class);
-//        clients.values().forEach(TradingWebSocketClient::doHandshake);
-        clients.keySet().forEach(System.out::println);
+        clients.values().forEach(TradingWebSocketClient::doHandshake);
     }
 
     @Autowired
@@ -91,7 +89,7 @@ public class WebSocketConfig {
     }
 
     @Autowired
-    public void setTaskExecutor(AsyncListenableTaskExecutor taskExecutor) {
+    public void setTaskExecutor(TaskExecutor taskExecutor) {
         this.taskExecutor = taskExecutor;
     }
 

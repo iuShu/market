@@ -61,11 +61,14 @@ public class OkxRestTemplate {
         HttpHeaders headers = new HttpHeaders();
         headers.put("OK-ACCESS-SIGN", Collections.singletonList(signature));
         headers.put("OK-ACCESS-TIMESTAMP", Collections.singletonList(utcTime));
+//        headers.put("OK-ACCESS-KEY", Collections.singletonList(apiInfo.getApiKey()));
+//        headers.put("OK-ACCESS-PASSPHRASE", Collections.singletonList(apiInfo.getPassphrase()));
+//        headers.put("Content-Type", Collections.singletonList("application/json;charset=utf-8"));
         return new HttpEntity<>(body, headers);
     }
 
     private JSONObject get(String api, HttpEntity<JSONObject> entity) {
-        return this.restTemplate.getForObject(url(api), JSONObject.class, entity);
+        return this.restTemplate.getForObject(url(api) + toUrlParams(entity.getBody()), JSONObject.class);
     }
 
     private JSONObject post(String api, HttpEntity<JSONObject> entity) {

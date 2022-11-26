@@ -22,10 +22,14 @@ import org.springframework.core.type.classreading.CachingMetadataReaderFactory;
 import org.springframework.core.type.classreading.MetadataReader;
 import org.springframework.core.type.classreading.MetadataReaderFactory;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Component;
+import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.adapter.standard.StandardWebSocketSession;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.util.*;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import static org.iushu.market.trade.okx.OkxConstants.*;
@@ -63,7 +67,7 @@ public class DispatchManager {
         }
         else {
             publicSession = session;
-            packet = subscribeChannelPacket();
+            packet = subscribeChannelPacket(session);
         }
 
         if (session.sendMessage(packet))
@@ -75,7 +79,7 @@ public class DispatchManager {
     @Async
     @EventListener(ChannelMessagingEvent.class)
     public void handleMessage(ChannelMessagingEvent<JSONObject> event) {
-        OkxWebSocketSession session = (OkxWebSocketSession) event.getSource();
+        OkxWebSocketSession session = new OkxWebSocketSession((WebSocketSession) event.getSource());
         JSONObject message = event.getPayload();
         dispatchOperation(session, message);
         dispatchEvent(session, message);
@@ -117,7 +121,8 @@ public class DispatchManager {
             return;
         }
 
-        JSONObject packet = subscribeChannelPacket();
+        logger.info("login success");
+        JSONObject packet = subscribeChannelPacket(session);
         if (session.sendMessage(packet))
             logger.debug("sent message {}", packet.toJSONString());
         else
@@ -156,23 +161,24 @@ public class DispatchManager {
     }
 
     private void close() {
-        if (publicSession.isActive())
+        if (publicSession != null && publicSession.isActive())
             publicSession.close();
-        if (privateSession.isActive())
+        if (privateSession != null && privateSession.isActive())
             privateSession.close();
         this.applicationContext.close();
     }
 
-    private JSONObject subscribeChannelPacket() {
+    private JSONObject subscribeChannelPacket(OkxWebSocketSession session) {
         JSONArray subscribingChannels = JSONArray.of();
-        channels.keySet().forEach(k -> {
+        boolean isPrivate = privateSession != null && session.getSessionId().equals(privateSession.getSessionId());
+        channels.keySet().stream().filter(channel -> isPrivate == PRIVATE_CHANNELS.contains(channel)).forEach(k -> {
             JSONObject each = JSONObject.of();
             each.put("channel", k);
             each.put("instId", properties.getInstId());
             each.put("instType", properties.getInstType());
             subscribingChannels.add(each);
         });
-        return PacketUtils.subscribePacket(subscribingChannels);
+        return subscribingChannels.isEmpty() ? JSONObject.of() : PacketUtils.subscribePacket(subscribingChannels);
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -187,7 +193,7 @@ public class DispatchManager {
                 MetadataReader reader = factory.getMetadataReader(resource);
                 AnnotationMetadata metadata = reader.getAnnotationMetadata();
                 Set<MethodMetadata> annotatedMethods = metadata.getAnnotatedMethods(annotationName);
-                if (annotatedMethods.isEmpty())
+                if (!metadata.getAnnotations().isPresent(OkxComponent.class) || annotatedMethods.isEmpty())
                     continue;
 
                 Class<?> beanClass = Class.forName(metadata.getClassName());

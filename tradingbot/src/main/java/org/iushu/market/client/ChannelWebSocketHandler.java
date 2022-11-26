@@ -19,6 +19,8 @@ public class ChannelWebSocketHandler implements WebSocketHandler, ApplicationCon
 
     private static final Logger logger = LoggerFactory.getLogger(ChannelWebSocketHandler.class);
 
+    public static final CloseStatus INITIATE_CLOSE = new CloseStatus(4444);
+
     protected WebSocketProperties properties;
     protected WebSocketClient client;
     protected WebSocketSession session;
@@ -35,15 +37,15 @@ public class ChannelWebSocketHandler implements WebSocketHandler, ApplicationCon
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
         logger.info("connect established {}", session.getId());
         this.session = session;
-        this.eventPublisher.publishEvent(ChannelOpenedEvent.of(this, session));
+        this.eventPublisher.publishEvent(new ChannelOpenedEvent<>(this, session));
     }
 
     @Override
     public void handleMessage(WebSocketSession session, WebSocketMessage<?> message) throws Exception {
-        logger.debug("{}", message.toString());
+        logger.debug("{}", message.getPayload().toString());
         if (message instanceof TextMessage) {
             JSONObject payload = JSONObject.parseObject(message.getPayload().toString());
-            this.eventPublisher.publishEvent(ChannelMessagingEvent.of(session, payload));
+            this.eventPublisher.publishEvent(new ChannelMessagingEvent<>(session, payload));
         }
         else if (message instanceof PongMessage) {
             // ignore
@@ -56,15 +58,17 @@ public class ChannelWebSocketHandler implements WebSocketHandler, ApplicationCon
     @Override
     public void handleTransportError(WebSocketSession session, Throwable exception) throws Exception {
         logger.warn("transport error", exception);
-        this.eventPublisher.publishEvent(ChannelErrorEvent.of(session, exception));
+        this.eventPublisher.publishEvent(new ChannelErrorEvent<>(session, exception));
     }
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus closeStatus) throws Exception {
         logger.warn("connection closed due to {} {}", closeStatus.getCode(), closeStatus.getReason());
+        if (INITIATE_CLOSE.equalsCode(closeStatus))
+            return;
         if (reconnectTimes >= properties.getReconnectTime()) {
             logger.warn("client reached max reconnect times, over");
-            this.eventPublisher.publishEvent(ChannelClosedEvent.of(session, closeStatus));
+            this.eventPublisher.publishEvent(new ChannelClosedEvent<>(session, closeStatus));
             return;
         }
 

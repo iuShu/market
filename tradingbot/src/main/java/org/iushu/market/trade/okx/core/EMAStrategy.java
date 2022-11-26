@@ -11,14 +11,18 @@ import org.iushu.market.trade.okx.config.SubscribeChannel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.context.event.ContextRefreshedEvent;
+import org.springframework.context.event.EventListener;
 
 import javax.annotation.PostConstruct;
 import java.math.BigDecimal;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.stream.Collectors;
 
 import static java.math.BigDecimal.ONE;
 import static org.iushu.market.trade.CalculateUtils.*;
@@ -43,7 +47,7 @@ public class EMAStrategy implements Strategy<Double> {
         this.restTemplate = restTemplate;
     }
 
-//    @PostConstruct
+    @EventListener(ContextRefreshedEvent.class)
     public void prepare() {
         JSONArray history = restTemplate.getCandleHistory(OkxConstants.CANDLE_BAR, MAX_REPO_ELEMENTS);
         if (history.isEmpty()) {
@@ -51,7 +55,7 @@ public class EMAStrategy implements Strategy<Double> {
             System.exit(1);
         }
 
-        List<JSONArray> list = history.toList(JSONArray.class);
+        List<JSONArray> list = history.stream().map(each -> new JSONArray((Collection) each)).collect(Collectors.toList());
         Collections.reverse(list);
         repository.addAll(list);
         calculateAndSaveValue();

@@ -2,6 +2,10 @@ package org.iushu.market.trade.okx;
 
 import org.iushu.market.Constants;
 
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
+
 public interface OkxConstants {
 
     int SUCCESS = 0;
@@ -17,6 +21,8 @@ public interface OkxConstants {
     String CHANNEL_TICKERS = "tickers";
     String CHANNEL_ORDERS = "orders";
     String CHANNEL_CANDLE = "candle" + CANDLE_BAR;
+
+    Set<String> PRIVATE_CHANNELS = new HashSet<>(Arrays.asList("orders", "balance"));
 
     String GET_CANDLE_HISTORY = "/api/v5/market/candles";
     String GET_LEVER = "/api/v5/account/leverage-info";

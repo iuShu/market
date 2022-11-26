@@ -9,11 +9,15 @@ import org.iushu.market.trade.okx.PacketUtils;
 import org.iushu.market.trade.okx.Strategy;
 import org.iushu.market.trade.okx.config.OkxComponent;
 import org.iushu.market.trade.okx.config.SubscribeChannel;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.iushu.market.trade.okx.OkxConstants.*;
 
 @OkxComponent
 public class Initiator {
+
+    private static final Logger logger = LoggerFactory.getLogger(Initiator.class);
 
     private final Strategy<Double> strategy;
     private volatile String messageId = "";
@@ -36,6 +40,7 @@ public class Initiator {
             return;
 
         // send order-placing packet
+        logger.debug("recommend {}", posSide.getName());
     }
 
     @SubscribeChannel(op = OP_ORDER)
