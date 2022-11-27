@@ -3,7 +3,6 @@ package org.iushu.market.trade.okx;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import org.apache.tomcat.util.buf.StringUtils;
-import org.iushu.market.Constants;
 import org.iushu.market.component.JSONArrayAdapter;
 import org.iushu.market.component.Signature;
 import org.iushu.market.config.TradingProperties;
@@ -11,7 +10,9 @@ import org.iushu.market.trade.PosSide;
 import org.iushu.market.trade.okx.config.OkxComponent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.annotation.Profile;
+import org.springframework.beans.BeansException;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -21,17 +22,19 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
 @OkxComponent
-public class OkxRestTemplate {
+public class OkxRestTemplate implements ApplicationContextAware {
 
     private static final Logger logger = LoggerFactory.getLogger(OkxRestTemplate.class);
 
     private final RestTemplate restTemplate;
     private final TradingProperties properties;
     private final TradingProperties.ApiInfo apiInfo;
+    private boolean test = true;
 
     public OkxRestTemplate(RestTemplate restTemplate, TradingProperties properties, TradingProperties.ApiInfo apiInfo) {
         this.restTemplate = restTemplate;
@@ -62,14 +65,16 @@ public class OkxRestTemplate {
         HttpHeaders headers = new HttpHeaders();
         headers.put("OK-ACCESS-SIGN", Collections.singletonList(signature));
         headers.put("OK-ACCESS-TIMESTAMP", Collections.singletonList(utcTime));
-//        headers.put("OK-ACCESS-KEY", Collections.singletonList(apiInfo.getApiKey()));
-//        headers.put("OK-ACCESS-PASSPHRASE", Collections.singletonList(apiInfo.getPassphrase()));
-//        headers.put("Content-Type", Collections.singletonList("application/json;charset=utf-8"));
+        headers.put("OK-ACCESS-KEY", Collections.singletonList(apiInfo.getApiKey()));
+        headers.put("OK-ACCESS-PASSPHRASE", Collections.singletonList(apiInfo.getPassphrase()));
+        headers.put("Content-Type", Collections.singletonList("application/json;charset=utf-8"));
+        if (test)
+            headers.put("x-simulated-trading", Collections.singletonList("1"));
         return new HttpEntity<>(body, headers);
     }
 
     private JSONObject get(String api, HttpEntity<JSONObject> entity) {
-        return this.restTemplate.getForObject(url(api) + toUrlParams(entity.getBody()), JSONObject.class);
+        return this.restTemplate.exchange(url(api) + toUrlParams(entity.getBody()), HttpMethod.GET, entity, JSONObject.class).getBody();
     }
 
     private JSONObject post(String api, HttpEntity<JSONObject> entity) {
@@ -130,4 +135,8 @@ public class OkxRestTemplate {
         return false;
     }
 
+    @Override
+    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+        test = 1 == Arrays.stream(applicationContext.getEnvironment().getActiveProfiles()).filter(p -> p.equals("test")).count();
+    }
 }

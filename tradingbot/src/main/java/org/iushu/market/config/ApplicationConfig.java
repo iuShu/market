@@ -34,14 +34,6 @@ public class ApplicationConfig {
     }
 
     @Bean
-    @Profile({"prod", Constants.EXChANGE_OKX})
-    public RestTemplate restTemplate(RestTemplateBuilder builder, TradingProperties.ApiInfo apiInfo) {
-        return builder.defaultHeader("OK-ACCESS-KEY", apiInfo.getApiKey())
-                .defaultHeader("OK-ACCESS-PASSPHRASE", apiInfo.getPassphrase())
-                .defaultHeader("Content-Type", "application/json").build();
-    }
-
-    @Bean
     @Profile({"test", Constants.EXChANGE_OKX})
     public RestTemplate testRestTemplate(RestTemplateBuilder builder, TradingProperties.ApiInfo apiInfo) {
         try {
@@ -51,11 +43,7 @@ public class ApplicationConfig {
             SSLConnectionSocketFactory factory = new SSLConnectionSocketFactory(sslContext, NoopHostnameVerifier.INSTANCE);
             HttpClient httpsClient = HttpClients.custom().setSSLSocketFactory(factory).setDefaultRequestConfig(requestConfig).build();
             ClientHttpRequestFactory requestFactory = new HttpComponentsClientHttpRequestFactory(httpsClient);
-            return builder.requestFactory(() -> requestFactory)
-                    .defaultHeader("OK-ACCESS-KEY", apiInfo.getApiKey())
-                    .defaultHeader("OK-ACCESS-PASSPHRASE", apiInfo.getPassphrase())
-                    .defaultHeader("x-simulated-trading", "1")
-                    .defaultHeader("Content-Type", "application/json;charset=utf-8").build();
+            return builder.requestFactory(() -> requestFactory).build();
         } catch (Exception e) {
             e.printStackTrace();
             System.exit(1);
