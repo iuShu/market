@@ -26,6 +26,8 @@ public interface OkxConstants {
 
     String GET_CANDLE_HISTORY = "/api/v5/market/candles";
     String GET_LEVER = "/api/v5/account/leverage-info";
+    String SET_LEVER = "/api/v5/account/set-leverage";
+    String GET_BALANCE = "/api/v5/account/balance";
 
     String CANCEL_ALGO = "/api/v5/trade/cancel-algos";
 

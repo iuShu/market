@@ -19,6 +19,8 @@ public class RobotNotifier implements Notifier {
         this.properties = properties;
     }
 
+    // TODO add rate limiter
+
     @Override
     public void notify(String title, String content) {
         JSONObject body = JSONObject.of("title", title, "text", content);

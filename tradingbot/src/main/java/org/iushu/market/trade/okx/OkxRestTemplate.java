@@ -7,6 +7,7 @@ import org.iushu.market.Constants;
 import org.iushu.market.component.JSONArrayAdapter;
 import org.iushu.market.component.Signature;
 import org.iushu.market.config.TradingProperties;
+import org.iushu.market.trade.PosSide;
 import org.iushu.market.trade.okx.config.OkxComponent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -86,6 +87,17 @@ public class OkxRestTemplate {
         return JSONArray.of();
     }
 
+    public double getBalance() {
+        JSONObject body = JSONObject.of("ccy", properties.getCurrency());
+        HttpEntity<JSONObject> entity = entity(HttpMethod.GET, OkxConstants.GET_BALANCE, body);
+        JSONObject response = get(OkxConstants.GET_BALANCE, entity);
+        if (!checkResp(response, "get balance of " + properties.getCurrency()))
+            return 0.0;
+        JSONArray data = response.getJSONArray("data");
+        JSONArray details = data.getJSONObject(0).getJSONArray("details");
+        return details.getJSONObject(0).getDoubleValue("availEq");
+    }
+
     public JSONArray getLeverage() {
         JSONObject body = JSONObject.of("instId", properties.getInstId(), "mgnMode", properties.getTdMode());
         HttpEntity<JSONObject> entity = entity(HttpMethod.GET, OkxConstants.GET_LEVER, body);
@@ -93,6 +105,15 @@ public class OkxRestTemplate {
         if (checkResp(response, "get leverage"))
             return response.getJSONArray("data");
         return JSONArray.of();
+    }
+
+    public boolean setLeverage(PosSide posSide, int lever) {
+        JSONObject body = JSONObject.of("instId", properties.getInstId());
+        body.put("lever", lever);
+        body.put("mgnMode", properties.getTdMode());
+        body.put("posSide", posSide.getName());
+        HttpEntity<JSONObject> entity = entity(HttpMethod.POST, OkxConstants.SET_LEVER, body);
+        return checkResp(post(OkxConstants.SET_LEVER, entity), "set leverage");
     }
 
     public boolean cancelAlgoOrder(String algoOrderId) {

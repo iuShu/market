@@ -20,6 +20,32 @@ trade:
   tdMode: isolated
   lever: 50
 
+  order:
+    posBase: 1000
+    posStart: 10
+    posIncrementRate: 2
+    maxOrder: 8
+    followRates:
+      - 0.006
+      - 0.012
+      - 0.018
+      - 0.024
+      - 0.030
+      - 0.036
+      - 0.042
+      - 0.048
+    pullbackRates:
+      - 0.006
+      - 0.006
+      - 0.006
+      - 0.006
+      - 0.006
+      - 0.006
+      - 0.006
+      - 0.006
+    makerFeeRate: 0.0005
+    takerFeeRate: 0.0002
+
   notify:
     windows: false
     robot: false

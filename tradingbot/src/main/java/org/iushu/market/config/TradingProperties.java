@@ -23,6 +23,8 @@ public class TradingProperties {
     private final TradingProperties.Okx okx = new TradingProperties.Okx();
     private final TradingProperties.Bnb bnb = new TradingProperties.Bnb();
 
+    private final OrderProperties order = new OrderProperties();
+
     public static class Notify {
 
         private boolean windows;
@@ -312,4 +314,7 @@ public class TradingProperties {
         return this.bnb;
     }
 
+    public OrderProperties getOrder() {
+        return order;
+    }
 }
