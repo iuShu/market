@@ -4,16 +4,20 @@ import org.iushu.market.Constants;
 
 public enum PosSide {
 
-    LongSide(Constants.POS_SIDE_LONG),
+    LongSide(Constants.POS_SIDE_LONG, Constants.SIDE_BUY, Constants.SIDE_SELL),
 
-    ShortSide(Constants.POS_SIDE_SHORT),
+    ShortSide(Constants.POS_SIDE_SHORT, Constants.SIDE_SELL, Constants.SIDE_BUY),
 
     ;
 
     String name;
+    String openSide;
+    String closeSide;
 
-    PosSide(String name) {
+    PosSide(String name, String openSide, String closeSide) {
         this.name = name;
+        this.openSide = openSide;
+        this.closeSide = closeSide;
     }
 
     public String getName() {
@@ -33,6 +37,14 @@ public enum PosSide {
 
     public boolean isLoss(double px, double lastPx) {
         return !isProfit(px, lastPx);
+    }
+
+    public String openSide() {
+        return openSide;
+    }
+
+    public String closeSide() {
+        return closeSide;
     }
 
     public static void main(String[] args) {

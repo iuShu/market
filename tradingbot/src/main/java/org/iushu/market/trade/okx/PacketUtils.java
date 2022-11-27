@@ -3,7 +3,10 @@ package org.iushu.market.trade.okx;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import org.iushu.market.component.Signature;
+import org.iushu.market.config.TradingProperties;
+import org.iushu.market.trade.PosSide;
 
+import java.util.List;
 import java.util.Random;
 
 public class PacketUtils {
@@ -29,15 +32,31 @@ public class PacketUtils {
         return JSONObject.of("op", "subscribe", "args", channels);
     }
 
-    /*
-    public static JSONObject placeOrderPacket(Order order) {
-        JSONArray args = JSONArray.of(orderPacket(order));
+    public static JSONObject placeOrderPacket(TradingProperties properties, String side, PosSide posSide,
+                                              String ordType, int pos, double px) {
+        JSONObject orderPacket = orderPacket(properties, side, posSide, ordType, pos, px);
+        JSONArray args = JSONArray.of(orderPacket);
         JSONObject packet = JSONObject.of("op", "order");
         packet.put("id", Long.toString(identifier()));
         packet.put("args", args);
         return packet;
     }
 
+
+    public static JSONObject orderPacket(TradingProperties properties, String side, PosSide posSide,
+                                         String ordType, int pos, double px) {
+        JSONObject data = JSONObject.of("instId", properties.getInstId());
+        data.put("tdMode", properties.getTdMode());
+        data.put("side", side);
+        data.put("posSide", posSide.getName());
+        data.put("ordType", ordType);
+        data.put("sz", pos);
+        if (px > 0)
+            data.put("px", Double.toString(px));
+        return data;
+    }
+
+    /*
     public static JSONObject placeOrdersPacket(Collection<Order> orderList) {
         JSONArray args = new JSONArray();
         orderList.forEach(order -> args.add(orderPacket(order)));
@@ -46,26 +65,14 @@ public class PacketUtils {
         packet.put("args", args);
         return packet;
     }
+    */
 
-    public static JSONObject orderPacket(Order order) {
-        JSONObject data = JSONObject.of("instId", Setting.INST_ID);
-        data.put("tdMode", Setting.TD_MODE);
-        data.put("side", order.getSide());
-        data.put("posSide", order.getPosSide().getName());
-        data.put("ordType", order.getOrderType());
-        data.put("sz", Integer.toString(order.getPosition()));
-        if (order.getPrice() > 0)
-            data.put("px", Double.toString(order.getPrice()));
-        return data;
-    }
-
-    public static JSONObject cancelOrdersPacket(List<Order> lives) {
+    public static JSONObject cancelOrdersPacket(List<String> lives, String instId) {
         JSONObject packet = JSONObject.of("id", Long.toString(identifier()), "op", "batch-cancel-orders");
         JSONArray args = new JSONArray();
-        lives.forEach(live -> args.add(JSONObject.of("instId", Setting.INST_ID, "ordId", live.getOrderId())));
+        lives.forEach(live -> args.add(JSONObject.of("instId", instId, "ordId", live)));
         packet.put("args", args);
         return packet;
     }
-    */
 
 }

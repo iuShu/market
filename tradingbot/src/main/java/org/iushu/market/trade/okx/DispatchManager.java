@@ -151,7 +151,8 @@ public class DispatchManager {
             try {
                 Object bean = subscriber.getSubscriber();
                 Method handler = subscriber.getHandleMethod();
-                Object[] args = handler.getParameterCount() == 1 ? new Object[]{message} : new Object[]{session, message};
+                Object[] args = handler.getParameterCount() == 1 ? new Object[]{message} :
+                        handler.getParameterCount() == 2 ? new Object[]{session, message} : new Object[]{session, message, this};
                 handler.invoke(bean, args);
             } catch (Exception e) {
                 logger.error("invoke subscriber method error {}", message.toJSONString(), e);
@@ -160,7 +161,7 @@ public class DispatchManager {
         });
     }
 
-    private void close() {
+    public void close() {
         if (publicSession != null && publicSession.isActive())
             publicSession.close();
         if (privateSession != null && privateSession.isActive())

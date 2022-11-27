@@ -30,5 +30,6 @@ public interface OkxConstants {
     String GET_BALANCE = "/api/v5/account/balance";
 
     String CANCEL_ALGO = "/api/v5/trade/cancel-algos";
+    String CLOSE_POSITION = "/api/v5/trade/close-position";
 
 }

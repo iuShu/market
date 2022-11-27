@@ -19,10 +19,8 @@ public class Recorder {
     public void recordOrderActivity(JSONObject message) {
         JSONObject data = message.getJSONArray("data").getJSONObject(0);
         String state = data.getString("state");
-        if (ORDER_STATE_FILLED.equals(state))
-            return;
-
-        String activity = ORDER_STATE_LIVE.equals(state) ? "placed" : "canceled";
+        String activity = ORDER_STATE_LIVE.equals(state) ? "placed" :
+                ORDER_STATE_FILLED.equals(state) ? "filled" : "canceled";
         String px = data.getString("px");
         String side = data.getString("side");
         String ordId = data.getString("ordId");

@@ -128,6 +128,16 @@ public class OkxRestTemplate implements ApplicationContextAware {
         return checkResp(response, "cancel algo order");
     }
 
+    public boolean closePosition(PosSide posSide) {
+        JSONObject body = JSONObject.of("instId", properties.getInstId());
+        body.put("posSide", posSide.getName());
+        body.put("mgnMode", properties.getTdMode());
+        body.put("autoCxl", true);
+        HttpEntity<JSONObject> entity = entity(HttpMethod.POST, OkxConstants.CLOSE_POSITION, body);
+        JSONObject response = post(OkxConstants.CLOSE_POSITION, entity);
+        return checkResp(response, "close position");
+    }
+
     private static boolean checkResp(JSONObject response, String topic) {
         if (response != null && response.getIntValue("code", -1) == 0)
             return true;

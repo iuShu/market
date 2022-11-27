@@ -7,29 +7,49 @@ import org.iushu.market.trade.PosSide;
 import org.iushu.market.trade.okx.*;
 import org.iushu.market.trade.okx.config.OkxComponent;
 import org.iushu.market.trade.okx.config.SubscribeChannel;
+import org.iushu.market.trade.okx.event.OrderClosedEvent;
+import org.iushu.market.trade.okx.event.OrderErrorEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.BeansException;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.context.event.EventListener;
+import org.springframework.scheduling.TaskScheduler;
 
+import java.time.Duration;
+import java.util.Date;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.iushu.market.Constants.ORDER_TYPE_MARKET;
+import static org.iushu.market.trade.MartinOrderUtils.lastPos;
+import static org.iushu.market.trade.MartinOrderUtils.totalCost;
 import static org.iushu.market.trade.okx.OkxConstants.*;
 
 @OkxComponent
-public class Initiator {
+public class Initiator implements ApplicationContextAware {
 
     private static final Logger logger = LoggerFactory.getLogger(Initiator.class);
 
-    private final Strategy<Double> strategy;
     private final OkxRestTemplate restTemplate;
     private final TradingProperties properties;
+    private ApplicationEventPublisher eventPublisher;
+    private final TaskScheduler taskScheduler;
+
+    private final Strategy<Double> strategy;
     private volatile double balance = 0.0;
     private volatile String messageId = "";
-    private volatile boolean existed = false;
+    private final AtomicBoolean existed = new AtomicBoolean(false);
+    private final AtomicInteger batch = new AtomicInteger(1);
 
-    public Initiator(Strategy<Double> strategy, OkxRestTemplate restTemplate, TradingProperties properties) {
+    public Initiator(Strategy<Double> strategy, OkxRestTemplate restTemplate, TradingProperties properties, TaskScheduler taskScheduler) {
         this.strategy = strategy;
         this.restTemplate = restTemplate;
         this.properties = properties;
+        this.taskScheduler = taskScheduler;
     }
 
     @EventListener(ContextRefreshedEvent.class)
@@ -56,8 +76,8 @@ public class Initiator {
     }
 
     @SubscribeChannel(channel = CHANNEL_TICKERS)
-    public void placeFirstOrder(OkxWebSocketSession session, JSONObject message) {
-        if (existed)
+    public void placeFirstOrder(OkxWebSocketSession session, JSONObject message, DispatchManager manager) {
+        if (existed.get())
             return;
 
         JSONArray data = message.getJSONArray("data");
@@ -67,8 +87,30 @@ public class Initiator {
         if (posSide == null)
             return;
 
-        // send order-placing packet
+        double cost = totalCost(price, lastPos(properties.getOrder()), posSide, properties.getLever(), properties.getOrder());
+        if (balance < cost) {
+            String errMsg = String.format("account balance not enough for cost %s", cost);
+            logger.error(errMsg);
+            eventPublisher.publishEvent(new OrderErrorEvent(errMsg));
+            return;
+        }
+
         logger.debug("recommend {}", posSide.getName());
+        JSONObject packet = PacketUtils.placeOrderPacket(properties, posSide.openSide(), posSide, ORDER_TYPE_MARKET,
+                properties.getOrder().getPosStart(), 0.0);
+
+        if (!existed.get() && existed.compareAndSet(false, true))
+            return;
+        if (session.sendMessage(packet)) {
+            logger.info("sent first order {} {}", price, properties.getOrder().getPosStart());
+            messageId = packet.getString("id");
+        }
+        else {
+            String errMsg = "send first order failed";
+            logger.warn(errMsg);
+            eventPublisher.publishEvent(new OrderErrorEvent(errMsg));
+            taskScheduler.schedule(() -> existed.compareAndSet(true, false), new Date(System.currentTimeMillis() + 5000));
+        }
     }
 
     @SubscribeChannel(op = OP_ORDER)
@@ -81,9 +123,15 @@ public class Initiator {
         if (SUCCESS != code)
             return;
 
-        existed = true;
         messageId = "";
-        logger.info("placed first order");
+        logger.info("placed first order {} success", mid);
+    }
+
+    @EventListener(OrderClosedEvent.class)
+    public void onOrderClose() {
+        existed.compareAndSet(true, false);
+        refreshAccountBalance();
+        logger.info("{} batch order closed, balance {}, ready to next round", batch.getAndIncrement(), balance);
     }
 
     private void refreshAccountBalance() {
@@ -93,4 +141,8 @@ public class Initiator {
         this.balance = balance;
     }
 
+    @Override
+    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+        this.eventPublisher = applicationContext;
+    }
 }
