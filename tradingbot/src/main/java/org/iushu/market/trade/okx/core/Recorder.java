@@ -21,7 +21,7 @@ public class Recorder {
         String state = data.getString("state");
         String activity = ORDER_STATE_LIVE.equals(state) ? "placed" :
                 ORDER_STATE_FILLED.equals(state) ? "filled" : "canceled";
-        String px = data.getString("px");
+        String px = ORDER_STATE_FILLED.equals(state) ? data.getString("fillPx") : data.getString("px");
         String side = data.getString("side");
         String ordId = data.getString("ordId");
         String posSide = data.getString("posSide");

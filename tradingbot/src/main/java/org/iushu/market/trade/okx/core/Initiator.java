@@ -19,7 +19,6 @@ import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.TaskScheduler;
 
-import java.time.Duration;
 import java.util.Date;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -76,7 +75,7 @@ public class Initiator implements ApplicationContextAware {
     }
 
     @SubscribeChannel(channel = CHANNEL_TICKERS)
-    public void placeFirstOrder(OkxWebSocketSession session, JSONObject message, DispatchManager manager) {
+    public void placeFirstOrder(OkxWebSocketSession session, JSONObject message) {
         if (existed.get())
             return;
 
@@ -109,7 +108,6 @@ public class Initiator implements ApplicationContextAware {
             String errMsg = "send first order failed";
             logger.warn(errMsg);
             eventPublisher.publishEvent(new OrderErrorEvent(errMsg));
-            taskScheduler.schedule(() -> existed.compareAndSet(true, false), new Date(System.currentTimeMillis() + 5000));
         }
     }
 
@@ -120,16 +118,20 @@ public class Initiator implements ApplicationContextAware {
             return;
 
         int code = message.getIntValue("code", -1);
-        if (SUCCESS != code)
+        if (SUCCESS == code) {
+            messageId = "";
+            logger.info("placed first order {} success", mid);
             return;
+        }
 
-        messageId = "";
-        logger.info("placed first order {} success", mid);
+        String errMsg = "place first order failed";
+        logger.error(errMsg);
+        eventPublisher.publishEvent(new OrderErrorEvent(message));
     }
 
     @EventListener(OrderClosedEvent.class)
     public void onOrderClose() {
-        existed.compareAndSet(true, false);
+        taskScheduler.schedule(() -> existed.compareAndSet(true, false), new Date(System.currentTimeMillis() + 5000));
         refreshAccountBalance();
         logger.info("{} batch order closed, balance {}, ready to next round", batch.getAndIncrement(), balance);
     }

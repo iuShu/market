@@ -12,10 +12,10 @@ import static org.iushu.market.trade.CalculateUtils.*;
 
 public class MartinOrderUtils {
 
-    private static int orderPos(int idx, OrderProperties properties) {
+    public static int orderPos(int idx, OrderProperties properties) {
         int pos = properties.getPosStart();
         for (int i = 0; i < idx; i++)
-            pos *= properties.getPosIncrementRate();
+            pos = nextPosition(pos, properties);
         return pos;
     }
 
@@ -24,19 +24,23 @@ public class MartinOrderUtils {
         for (int i = 0; i < properties.getMaxOrder() + 1; i++) {
             if (p == pos)
                 return idx;
-            p *= properties.getPosIncrementRate();
+            p = nextPosition(p, properties);
             idx++;
         }
         throw new IllegalArgumentException("unexpected index of pos " + pos);
     }
 
-    private static int totalPosition(int pos, OrderProperties properties) {
+    public static int nextPosition(int orderPos, OrderProperties properties) {
+        return orderPos * properties.getPosIncrementRate();
+    }
+
+    public static int totalPosition(int pos, OrderProperties properties) {
         int total = 0, p = properties.getPosStart();
         for (int i = 0; i <= orderIndex(pos, properties); i++) {
             if (p == pos)
                 return total + pos;
             total += p;
-            p *= properties.getPosIncrementRate();
+            p = nextPosition(p, properties);
         }
         throw new IllegalArgumentException("unexpected pos " + pos);
     }
@@ -85,7 +89,7 @@ public class MartinOrderUtils {
     }
 
     public static double nextOrderPrice(double firstPx, int orderPos, PosSide posSide, OrderProperties properties) {
-        int nextPos = orderPos * properties.getPosIncrementRate();
+        int nextPos = nextPosition(orderPos, properties);
         int idx = orderIndex(nextPos, properties);
         double followRate = properties.getFollowRates().get(idx - 1);
         BigDecimal rate = posSide == PosSide.LongSide ? sub(ONE, decimal(followRate)) : add(ONE, decimal(followRate));
@@ -149,7 +153,13 @@ public class MartinOrderUtils {
 
 //        positions.forEach(p -> System.out.println(p + " " + totalCloseFee(16646.5, p, PosSide.LongSide, orderProperties)));
 
-        positions.forEach(p -> System.out.println(p + " " + totalCost(16646.5, p, PosSide.LongSide, 80, orderProperties)));
+//        positions.forEach(p -> System.out.println(p + " " + totalCost(16646.5, p, PosSide.LongSide, 80, orderProperties)));
+
+//        for (int i = 0; i < orderProperties.getMaxOrder() - 1; i++) {
+//            int pos = orderPos(i, orderProperties);
+//            double nextOrderPrice = nextOrderPrice(16646.5, pos, PosSide.LongSide, orderProperties);
+//            System.out.println(nextPosition(pos, orderProperties) + " " + nextOrderPrice);
+//        }
 
     }
 

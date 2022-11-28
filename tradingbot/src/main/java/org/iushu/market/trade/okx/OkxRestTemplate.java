@@ -26,6 +26,9 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import static org.iushu.market.Constants.ALGO_PX_TYPE_LAST;
+import static org.iushu.market.Constants.ALGO_TYPE_OCO;
+
 @OkxComponent
 public class OkxRestTemplate implements ApplicationContextAware {
 
@@ -119,6 +122,26 @@ public class OkxRestTemplate implements ApplicationContextAware {
         body.put("posSide", posSide.getName());
         HttpEntity<JSONObject> entity = entity(HttpMethod.POST, OkxConstants.SET_LEVER, body);
         return checkResp(post(OkxConstants.SET_LEVER, entity), "set leverage");
+    }
+
+    public JSONObject placeAlgoOrder(PosSide posSide, String side, int totalPos, double tpPrice, double slPrice) {
+        JSONObject body = JSONObject.of("instId", properties.getInstId());
+        body.put("tdMode", properties.getTdMode());
+        body.put("posSide", posSide.getName());
+        body.put("side", side);
+        body.put("ordType", ALGO_TYPE_OCO);
+        body.put("sz", String.valueOf(totalPos));
+        body.put("tpTriggerPxType", ALGO_PX_TYPE_LAST);
+        body.put("tpTriggerPx", Double.toString(tpPrice));
+        body.put("tpOrdPx", "-1");
+        body.put("slTriggerPxType", ALGO_PX_TYPE_LAST);
+        body.put("slTriggerPx", Double.toString(slPrice));
+        body.put("slOrdPx", "-1");
+        HttpEntity<JSONObject> entity = entity(HttpMethod.POST, OkxConstants.PLACE_ALGO, body);
+        JSONObject response = post(OkxConstants.PLACE_ALGO, entity);
+        if (checkResp(response, "place algo order"))
+            return response.getJSONArray("data").getJSONObject(0);
+        return JSONObject.of();
     }
 
     public boolean cancelAlgoOrder(String algoOrderId) {

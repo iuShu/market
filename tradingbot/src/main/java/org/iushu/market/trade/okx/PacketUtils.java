@@ -6,8 +6,11 @@ import org.iushu.market.component.Signature;
 import org.iushu.market.config.TradingProperties;
 import org.iushu.market.trade.PosSide;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Random;
+
+import static org.iushu.market.trade.okx.OkxConstants.*;
 
 public class PacketUtils {
 
@@ -25,23 +28,22 @@ public class PacketUtils {
         login.put("timestamp", timestamp);
         login.put("sign", signature);
         JSONArray args = JSONArray.of(login);
-        return JSONObject.of("op", "login", "args", args);
+        return JSONObject.of("op", OP_LOGIN, "args", args);
     }
 
     public static JSONObject subscribePacket(JSONArray channels) {
-        return JSONObject.of("op", "subscribe", "args", channels);
+        return JSONObject.of("op", OP_SUBSCRIBE, "args", channels);
     }
 
     public static JSONObject placeOrderPacket(TradingProperties properties, String side, PosSide posSide,
                                               String ordType, int pos, double px) {
         JSONObject orderPacket = orderPacket(properties, side, posSide, ordType, pos, px);
         JSONArray args = JSONArray.of(orderPacket);
-        JSONObject packet = JSONObject.of("op", "order");
+        JSONObject packet = JSONObject.of("op", OP_ORDER);
         packet.put("id", Long.toString(identifier()));
         packet.put("args", args);
         return packet;
     }
-
 
     public static JSONObject orderPacket(TradingProperties properties, String side, PosSide posSide,
                                          String ordType, int pos, double px) {
@@ -56,19 +58,17 @@ public class PacketUtils {
         return data;
     }
 
-    /*
-    public static JSONObject placeOrdersPacket(Collection<Order> orderList) {
+    public static JSONObject placeOrdersPacket(Collection<JSONObject> orderPackets) {
         JSONArray args = new JSONArray();
-        orderList.forEach(order -> args.add(orderPacket(order)));
-        JSONObject packet = JSONObject.of("op", "batch-orders");
+        args.addAll(orderPackets);
+        JSONObject packet = JSONObject.of("op", OP_BATCH_ORDERS);
         packet.put("id", Long.toString(identifier()));
         packet.put("args", args);
         return packet;
     }
-    */
 
     public static JSONObject cancelOrdersPacket(List<String> lives, String instId) {
-        JSONObject packet = JSONObject.of("id", Long.toString(identifier()), "op", "batch-cancel-orders");
+        JSONObject packet = JSONObject.of("id", Long.toString(identifier()), "op", OP_BATCH_CANCEL_ORDERS);
         JSONArray args = new JSONArray();
         lives.forEach(live -> args.add(JSONObject.of("instId", instId, "ordId", live)));
         packet.put("args", args);

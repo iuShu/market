@@ -30,8 +30,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.iushu.market.Constants.ORDER_STATE_FILLED;
 import static org.iushu.market.Constants.ORDER_STATE_LIVE;
 import static org.iushu.market.trade.MartinOrderUtils.takeProfitPrice;
-import static org.iushu.market.trade.okx.OkxConstants.CHANNEL_ORDERS;
-import static org.iushu.market.trade.okx.OkxConstants.CHANNEL_TICKERS;
+import static org.iushu.market.trade.okx.OkxConstants.*;
 
 @OkxComponent
 public class Terminator implements ApplicationContextAware {
@@ -45,6 +44,7 @@ public class Terminator implements ApplicationContextAware {
     private final Map<String, String> orderStateMap;
     private volatile int orderPos;
     private volatile PosSide posSide;
+    private volatile String messageId = "";
     private final AtomicReference<Double> firstPx = new AtomicReference<>(0.0);
 
     public Terminator(TradingProperties properties, OkxRestTemplate restTemplate) {
@@ -54,7 +54,7 @@ public class Terminator implements ApplicationContextAware {
     }
 
     @SubscribeChannel(channel = CHANNEL_ORDERS)
-    public void onOrderClosed(OkxWebSocketSession session, JSONObject message, DispatchManager manager) {
+    public void onOrderClosed(OkxWebSocketSession session, JSONObject message) {
         JSONObject data = message.getJSONArray("data").getJSONObject(0);
         String ordId = data.getString("ordId");
         String state = data.getString("state");
@@ -63,14 +63,9 @@ public class Terminator implements ApplicationContextAware {
         if (!ORDER_STATE_FILLED.equals(state) || !posSide.closeSide().equals(side))
             return;
 
-        if (!cancelLiveOrders(session)) {
-            String errMsg = "cancel live orders error";
-            logger.error(errMsg);
-            eventPublisher.publishEvent(new OrderErrorEvent(errMsg));
-            return;
-        }
-        orderStateMap.clear();
+        cancelLiveOrders(session);
         firstPx.set(0.0);
+        orderStateMap.clear();
         eventPublisher.publishEvent(new OrderClosedEvent(null));
     }
 
@@ -87,7 +82,7 @@ public class Terminator implements ApplicationContextAware {
     }
 
     @SubscribeChannel(channel = CHANNEL_TICKERS)
-    public void takeProfitCheck(OkxWebSocketSession session, JSONObject message) {
+    public void takeProfitCheck(JSONObject message) {
         if (posSide == null)
             return;
 
@@ -108,18 +103,41 @@ public class Terminator implements ApplicationContextAware {
         }
     }
 
-    private boolean cancelLiveOrders(OkxWebSocketSession session) {
+    private void cancelLiveOrders(OkxWebSocketSession session) {
         List<String> lives = new ArrayList<>();
         orderStateMap.forEach((k, v) -> {
             if (v.equals(ORDER_STATE_LIVE))
                 lives.add(k);
         });
         if (lives.isEmpty())
-            return true;
+            return;
 
-        logger.info("send cancel {} live orders", lives.size());
         JSONObject packet = PacketUtils.cancelOrdersPacket(lives, properties.getInstId());
-        return session.sendMessage(packet);
+        messageId = packet.getString("id");
+        if (session.sendMessage(packet))
+            return;
+
+        String errMsg = "send cancel live orders error";
+        logger.error(errMsg);
+        eventPublisher.publishEvent(new OrderErrorEvent(errMsg));
+    }
+
+    @SubscribeChannel(op = EVENT_BATCH_CANCEL_ORDERS)
+    public void cancelOrderResponse(JSONObject message) {
+        if (!message.getString("id").equals(messageId))
+            return;
+
+        int code = message.getIntValue("code", -1);
+        JSONArray data = message.getJSONArray("data");
+        if (SUCCESS == code) {
+            messageId = "";
+            logger.info("canceled {} live orders", data.size());
+            return;
+        }
+
+        String errMsg = String.format("cancel %d live orders failed", data.size());
+        logger.error(errMsg);
+        eventPublisher.publishEvent(new OrderErrorEvent(message));
     }
 
     @Override
