@@ -63,7 +63,7 @@ public class Tracker implements ApplicationContextAware {
             packets.add(PacketUtils.orderPacket(properties, posSide.openSide(), posSide, ORDER_TYPE_LIMIT, pos, nextOrderPrice));
         }
         JSONObject packet = PacketUtils.placeOrdersPacket(packets);
-        if (session.sendMessage(packet)) {
+        if (session.sendPrivateMessage(packet)) {
             messageId = packet.getString("id");
             return;
         }
@@ -92,8 +92,7 @@ public class Tracker implements ApplicationContextAware {
             return;
         }
 
-        String errMsg = String.format("place %d follow orders failed", data.size());
-        logger.error(errMsg);
+        logger.error("place {} follow orders failed {}", data.size(), message);
         eventPublisher.publishEvent(new OrderErrorEvent(message));
     }
 

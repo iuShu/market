@@ -58,6 +58,7 @@ public class Terminator implements ApplicationContextAware {
         String ordId = data.getString("ordId");
         String state = data.getString("state");
         String side = data.getString("side");
+        PosSide posSide = PosSide.of(data.getString("posSide"));
         orderStateMap.put(ordId, state);
         if (!ORDER_STATE_FILLED.equals(state) || !posSide.closeSide().equals(side))
             return;
@@ -71,9 +72,8 @@ public class Terminator implements ApplicationContextAware {
     // can be merged to onOrderClosed(..)
     @EventListener(OrderFilledEvent.class)
     public void recordOrderFilled(OrderFilledEvent event) {
-        JSONObject message = (JSONObject) event.getSource();
-        JSONObject data = message.getJSONArray("data").getJSONObject(0);
-        orderPos = data.getIntValue("pos", -1);
+        JSONObject data = (JSONObject) event.getSource();
+        orderPos = data.getIntValue("sz", -1);
         if (orderPos == properties.getOrder().getPosStart()) {
             posSide = PosSide.of(data.getString("posSide"));
             firstPx.set(data.getDoubleValue("fillPx"));
@@ -113,7 +113,7 @@ public class Terminator implements ApplicationContextAware {
 
         JSONObject packet = PacketUtils.cancelOrdersPacket(lives, properties.getInstId());
         messageId = packet.getString("id");
-        if (session.sendMessage(packet))
+        if (session.sendPrivateMessage(packet))
             return;
 
         String errMsg = "send cancel live orders error";
@@ -134,8 +134,7 @@ public class Terminator implements ApplicationContextAware {
             return;
         }
 
-        String errMsg = String.format("cancel %d live orders failed", data.size());
-        logger.error(errMsg);
+        logger.error("cancel {} live orders failed {}", data.size(), message);
         eventPublisher.publishEvent(new OrderErrorEvent(message));
     }
 

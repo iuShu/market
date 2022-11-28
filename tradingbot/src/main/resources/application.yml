@@ -18,7 +18,7 @@ trade:
   instType: SWAP
   instId: ${trade.inst}-${trade.currency}-${trade.instType}
   tdMode: isolated
-  lever: 50
+  lever: 80
 
   order:
     posBase: 1000

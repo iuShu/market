@@ -14,22 +14,35 @@ public class OkxWebSocketSession {
 
     private static final Logger logger = LoggerFactory.getLogger(OkxWebSocketSession.class);
 
-    private final WebSocketSession session;
+    private volatile WebSocketSession publicSession;
+    private volatile WebSocketSession privateSession;
 
-    public OkxWebSocketSession(WebSocketSession session) {
-        this.session = session;
+    public WebSocketSession getPublicSession() {
+        return publicSession;
     }
 
-    public WebSocketSession getSession() {
-        return session;
+    public void setPublicSession(WebSocketSession publicSession) {
+        this.publicSession = publicSession;
     }
 
-    public String getSessionId() {
-        return session.getId();
+    public WebSocketSession getPrivateSession() {
+        return privateSession;
     }
 
-    public boolean sendMessage(JSONObject message) {
-        if (!isActive())
+    public void setPrivateSession(WebSocketSession privateSession) {
+        this.privateSession = privateSession;
+    }
+
+    public boolean sendPublicMessage(JSONObject message) {
+        return sendMessage(publicSession, message);
+    }
+
+    public boolean sendPrivateMessage(JSONObject message) {
+        return sendMessage(privateSession, message);
+    }
+
+    private boolean sendMessage(WebSocketSession session, JSONObject message) {
+        if (!isActive(session))
             return false;
         if (message.isEmpty()) {
             logger.warn("do not send blank message");
@@ -47,15 +60,17 @@ public class OkxWebSocketSession {
 
     public void close() {
         try {
-            if (isActive())
-                session.close(ChannelWebSocketHandler.INITIATE_CLOSE);
+            if (isActive(publicSession))
+                publicSession.close(ChannelWebSocketHandler.INITIATE_CLOSE);
+            if (isActive(privateSession))
+                privateSession.close(ChannelWebSocketHandler.INITIATE_CLOSE);
         } catch (Exception e) {
             logger.error("session close error, shutdown all", e);
             System.exit(1);
         }
     }
 
-    public boolean isActive() {
+    private boolean isActive(WebSocketSession session) {
         return session != null && session.isOpen();
     }
 

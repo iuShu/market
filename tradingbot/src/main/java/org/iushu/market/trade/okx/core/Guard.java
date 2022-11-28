@@ -26,8 +26,8 @@ public class Guard implements ApplicationContextAware {
 
     private static final Logger logger = LoggerFactory.getLogger(Guard.class);
 
-    private TradingProperties properties;
-    private OkxRestTemplate restTemplate;
+    private final TradingProperties properties;
+    private final OkxRestTemplate restTemplate;
     private ApplicationEventPublisher eventPublisher;
 
     private volatile double firstPx = 0.0;

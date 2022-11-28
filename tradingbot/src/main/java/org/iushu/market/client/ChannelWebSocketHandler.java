@@ -34,8 +34,8 @@ public class ChannelWebSocketHandler implements WebSocketHandler, ApplicationCon
     }
 
     @Override
-    public void afterConnectionEstablished(WebSocketSession session) throws Exception {
-        logger.info("connect established {}", session.getId());
+    public void afterConnectionEstablished(WebSocketSession session) {
+        logger.info("connect established {}", websocketUrl);
         this.session = session;
         this.eventPublisher.publishEvent(new ChannelOpenedEvent<>(this, session));
     }

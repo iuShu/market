@@ -60,10 +60,10 @@ public class OkxRestTemplate implements ApplicationContextAware {
         return now.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"));
     }
 
-    private HttpEntity<JSONObject> entity(HttpMethod httpMethod, String api, JSONObject body) {
+    private HttpHeaders headers(HttpMethod httpMethod, String api, Object body) {
         String utcTime = utc();
         String content = utcTime + httpMethod.name() + api;
-        content += httpMethod == HttpMethod.GET ? toUrlParams(body) : body.toJSONString();
+        content += httpMethod == HttpMethod.GET ? toUrlParams((JSONObject) body) : body.toString();
         String signature = Signature.sign(content, apiInfo.getSecret());
         HttpHeaders headers = new HttpHeaders();
         headers.put("OK-ACCESS-SIGN", Collections.singletonList(signature));
@@ -73,14 +73,22 @@ public class OkxRestTemplate implements ApplicationContextAware {
         headers.put("Content-Type", Collections.singletonList("application/json;charset=utf-8"));
         if (test)
             headers.put("x-simulated-trading", Collections.singletonList("1"));
-        return new HttpEntity<>(body, headers);
+        return headers;
+    }
+
+    private HttpEntity<JSONArray> entity(HttpMethod httpMethod, String api, JSONArray body) {
+        return new HttpEntity<>(body, headers(httpMethod, api, body));
+    }
+
+    private HttpEntity<JSONObject> entity(HttpMethod httpMethod, String api, JSONObject body) {
+        return new HttpEntity<>(body, headers(httpMethod, api, body));
     }
 
     private JSONObject get(String api, HttpEntity<JSONObject> entity) {
         return this.restTemplate.exchange(url(api) + toUrlParams(entity.getBody()), HttpMethod.GET, entity, JSONObject.class).getBody();
     }
 
-    private JSONObject post(String api, HttpEntity<JSONObject> entity) {
+    private JSONObject post(String api, HttpEntity entity) {
         return this.restTemplate.postForObject(url(api), entity, JSONObject.class);
     }
 
@@ -146,7 +154,7 @@ public class OkxRestTemplate implements ApplicationContextAware {
 
     public boolean cancelAlgoOrder(String algoOrderId) {
         JSONObject data = JSONObject.of("instId", properties.getInstId(), "algoId", algoOrderId);
-        HttpEntity<JSONObject> entity = entity(HttpMethod.POST, OkxConstants.CANCEL_ALGO, JSONArrayAdapter.of(data));
+        HttpEntity<JSONArray> entity = entity(HttpMethod.POST, OkxConstants.CANCEL_ALGO, JSONArray.of(data));
         JSONObject response = post(OkxConstants.CANCEL_ALGO, entity);
         return checkResp(response, "cancel algo order");
     }

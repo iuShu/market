@@ -98,9 +98,10 @@ public class Initiator implements ApplicationContextAware {
         JSONObject packet = PacketUtils.placeOrderPacket(properties, posSide.openSide(), posSide, ORDER_TYPE_MARKET,
                 properties.getOrder().getPosStart(), 0.0);
 
-        if (!existed.get() && existed.compareAndSet(false, true))
+        if (existed.get() || !existed.compareAndSet(false, true))
             return;
-        if (session.sendMessage(packet)) {
+
+        if (session.sendPrivateMessage(packet)) {
             logger.info("sent first order {} {}", price, properties.getOrder().getPosStart());
             messageId = packet.getString("id");
         }
@@ -124,8 +125,7 @@ public class Initiator implements ApplicationContextAware {
             return;
         }
 
-        String errMsg = "place first order failed";
-        logger.error(errMsg);
+        logger.error("place first order failed {}", message.toString());
         eventPublisher.publishEvent(new OrderErrorEvent(message));
     }
 

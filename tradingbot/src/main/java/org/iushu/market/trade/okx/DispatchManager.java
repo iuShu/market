@@ -3,6 +3,7 @@ package org.iushu.market.trade.okx;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import org.iushu.market.client.ChannelWebSocketHandler;
+import org.iushu.market.client.event.ChannelClosedEvent;
 import org.iushu.market.client.event.ChannelMessagingEvent;
 import org.iushu.market.client.event.ChannelOpenedEvent;
 import org.iushu.market.config.TradingProperties;
@@ -22,14 +23,12 @@ import org.springframework.core.type.classreading.CachingMetadataReaderFactory;
 import org.springframework.core.type.classreading.MetadataReader;
 import org.springframework.core.type.classreading.MetadataReaderFactory;
 import org.springframework.scheduling.annotation.Async;
-import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.adapter.standard.StandardWebSocketSession;
 
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.util.*;
-import java.util.function.Predicate;
+import java.util.concurrent.CountDownLatch;
 import java.util.stream.Collectors;
 
 import static org.iushu.market.trade.okx.OkxConstants.*;
@@ -45,9 +44,9 @@ public class DispatchManager {
     private final Map<String, List<Subscriber>> events = new HashMap<>();
     private final Map<String, List<Subscriber>> channels = new HashMap<>();
 
-    private OkxWebSocketSession publicSession;
-    private OkxWebSocketSession privateSession;
+    private final OkxWebSocketSession session = new OkxWebSocketSession();
     private ConfigurableApplicationContext applicationContext;
+    private final CountDownLatch latch = new CountDownLatch(2);
 
     public DispatchManager(TradingProperties properties, TradingProperties.ApiInfo apiInfo) {
         this.properties = properties;
@@ -58,32 +57,49 @@ public class DispatchManager {
     @EventListener(ChannelOpenedEvent.class)
     public void onChannelOpen(ChannelOpenedEvent<StandardWebSocketSession> event) {
         ChannelWebSocketHandler handler = (ChannelWebSocketHandler) event.getSource();
-        OkxWebSocketSession session = new OkxWebSocketSession(event.getPayload());
+        WebSocketSession session = event.getPayload();
 
         JSONObject packet;
         if (apiInfo.getWsPrivateUrl().equals(handler.getWebsocketUrl())) {
-            privateSession = session;
+            this.session.setPrivateSession(session);
             packet = PacketUtils.loginPacket(apiInfo.getApiKey(), apiInfo.getSecret(), apiInfo.getPassphrase());
+            this.session.sendPrivateMessage(packet);
         }
         else {
-            publicSession = session;
-            packet = subscribeChannelPacket(session);
+            this.session.setPublicSession(session);
+            waitOther();
+            packet = subscribeChannelPacket(false);
+            this.session.sendPublicMessage(packet);
         }
+    }
 
-        if (session.sendMessage(packet))
-            logger.debug("sent message {}", packet.toJSONString());
-        else
-            close();
+    private void waitOther() {
+        try {
+            if (latch.getCount() == 2) {
+                latch.countDown();
+                latch.await();
+            }
+            if (latch.getCount() == 1)
+                latch.countDown();
+        } catch (InterruptedException e) {
+            logger.error("wait other error", e);
+            System.exit(1);
+        }
     }
 
     @Async
     @EventListener(ChannelMessagingEvent.class)
     public void handleMessage(ChannelMessagingEvent<JSONObject> event) {
-        OkxWebSocketSession session = new OkxWebSocketSession((WebSocketSession) event.getSource());
         JSONObject message = event.getPayload();
         dispatchOperation(session, message);
         dispatchEvent(session, message);
         dispatchChannel(session, message);
+    }
+
+    @Async
+    @EventListener(ChannelClosedEvent.class)
+    public void channelClosed() {
+        this.close();
     }
 
     private void dispatchOperation(OkxWebSocketSession session, JSONObject message) {
@@ -99,12 +115,12 @@ public class DispatchManager {
     }
 
     private void dispatchChannel(OkxWebSocketSession session, JSONObject message) {
+        JSONObject arg = message.getJSONObject("arg");
         JSONArray data = message.getJSONArray("data");
-        if (data == null || data.isEmpty())
+        if (data == null || arg == null)
             return;
 
         try {
-            JSONObject arg = message.getJSONObject("arg");
             String channel = arg.getString("channel");
             invokeSubscriber(session, channels.get(channel), message);
         } catch (Exception e) {
@@ -122,8 +138,8 @@ public class DispatchManager {
         }
 
         logger.info("login success");
-        JSONObject packet = subscribeChannelPacket(session);
-        if (session.sendMessage(packet))
+        JSONObject packet = subscribeChannelPacket(true);
+        if (session.sendPrivateMessage(packet))
             logger.debug("sent message {}", packet.toJSONString());
         else
             close();
@@ -131,6 +147,7 @@ public class DispatchManager {
 
     @SubscribeChannel(event = EVENT_SUBSCRIBE)
     public void subscribeResponse(JSONObject message) {
+        waitOther();
         JSONObject arg = message.getJSONObject("arg");
         logger.info("subscribed to channel {}", arg.getString("channel"));
     }
@@ -161,16 +178,12 @@ public class DispatchManager {
     }
 
     public void close() {
-        if (publicSession != null && publicSession.isActive())
-            publicSession.close();
-        if (privateSession != null && privateSession.isActive())
-            privateSession.close();
+        this.session.close();
         this.applicationContext.close();
     }
 
-    private JSONObject subscribeChannelPacket(OkxWebSocketSession session) {
+    private JSONObject subscribeChannelPacket(boolean isPrivate) {
         JSONArray subscribingChannels = JSONArray.of();
-        boolean isPrivate = privateSession != null && session.getSessionId().equals(privateSession.getSessionId());
         channels.keySet().stream().filter(channel -> isPrivate == PRIVATE_CHANNELS.contains(channel)).forEach(k -> {
             JSONObject each = JSONObject.of();
             each.put("channel", k);
