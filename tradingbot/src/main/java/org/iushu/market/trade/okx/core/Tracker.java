@@ -2,16 +2,13 @@ package org.iushu.market.trade.okx.core;
 
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
-import org.iushu.market.Constants;
 import org.iushu.market.config.TradingProperties;
-import org.iushu.market.trade.MartinOrderUtils;
 import org.iushu.market.trade.PosSide;
 import org.iushu.market.trade.okx.OkxWebSocketSession;
 import org.iushu.market.trade.okx.PacketUtils;
 import org.iushu.market.trade.okx.config.OkxComponent;
 import org.iushu.market.trade.okx.config.SubscribeChannel;
 import org.iushu.market.trade.okx.event.OrderErrorEvent;
-import org.iushu.market.trade.okx.event.OrderFilledEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
@@ -55,7 +52,6 @@ public class Tracker implements ApplicationContextAware {
         firstPx = data.getDoubleValue("fillPx");
         placeFollowOrders(session, posSide);
         addMarginBalance();
-        eventPublisher.publishEvent(new OrderFilledEvent(data));
     }
 
     private void placeFollowOrders(OkxWebSocketSession session, PosSide posSide) {

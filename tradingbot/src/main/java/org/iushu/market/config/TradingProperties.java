@@ -31,6 +31,8 @@ public class TradingProperties {
         private boolean robot;
         private String webhook;
         private String secret;
+        private int rateLimited;
+        private long limitedPeriod;
 
         public boolean isWindows() {
             return windows;
@@ -62,6 +64,22 @@ public class TradingProperties {
 
         public void setSecret(String secret) {
             this.secret = secret;
+        }
+
+        public int getRateLimited() {
+            return rateLimited;
+        }
+
+        public void setRateLimited(int rateLimited) {
+            this.rateLimited = rateLimited;
+        }
+
+        public long getLimitedPeriod() {
+            return limitedPeriod;
+        }
+
+        public void setLimitedPeriod(long limitedPeriod) {
+            this.limitedPeriod = limitedPeriod;
         }
     }
 

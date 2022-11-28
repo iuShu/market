@@ -8,6 +8,7 @@ import org.iushu.market.trade.okx.config.OkxComponent;
 import org.iushu.market.trade.okx.config.SubscribeChannel;
 import org.iushu.market.trade.okx.event.OrderClosedEvent;
 import org.iushu.market.trade.okx.event.OrderErrorEvent;
+import org.iushu.market.trade.okx.event.OrderFilledEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
@@ -54,16 +55,20 @@ public class Guard implements ApplicationContextAware {
         if (data.getDoubleValue("fillSz") < pos)    // partial filled
             return;
 
-        placeAlgoOrder(px, pos, posSide);
+        data.put("_ttlPos", totalPosition(pos, properties.getOrder()));
+        data.put("_tpPx", takeProfitPrice(firstPx, pos, posSide, properties.getOrder()));
+        data.put("_slPx", stopLossPrice(firstPx, posSide, properties.getOrder()));
+        eventPublisher.publishEvent(new OrderFilledEvent(data));
+        placeAlgoOrder(data, pos, posSide);
     }
 
-    private void placeAlgoOrder(double px, int pos, PosSide posSide) {
-        if (!cancelPreviousAlgo())
+    private void placeAlgoOrder(JSONObject data, double px, PosSide posSide) {
+        if (algoId.length() > 0 && !cancelPreviousAlgo())
             return;
 
-        int totalPos = totalPosition(pos, properties.getOrder());
-        double tpPx = takeProfitPrice(firstPx, pos, posSide, properties.getOrder());
-        double slPx = stopLossPrice(firstPx, posSide, properties.getOrder());
+        int totalPos = data.getIntValue("_ttlPos", -1);
+        double tpPx = data.getDoubleValue("_tpPx");
+        double slPx = data.getDoubleValue("_slPx");
         JSONObject response = restTemplate.placeAlgoOrder(posSide, posSide.closeSide(), totalPos, tpPx, slPx);
         if (!response.isEmpty()) {
             algoId = response.getString("algoId");
@@ -77,9 +82,6 @@ public class Guard implements ApplicationContextAware {
     }
 
     private boolean cancelPreviousAlgo() {
-        if (algoId.isEmpty())
-            return true;
-
         if (restTemplate.cancelAlgoOrder(algoId)) {
             logger.info("canceled previous algo {}", algoId);
             return true;

@@ -51,3 +51,5 @@ trade:
     robot: false
     webhook:
     secret:
+    rateLimited: 20
+    limitedPeriod: 60000

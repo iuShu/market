@@ -4,7 +4,6 @@ import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import org.iushu.market.config.TradingProperties;
 import org.iushu.market.trade.PosSide;
-import org.iushu.market.trade.okx.DispatchManager;
 import org.iushu.market.trade.okx.OkxRestTemplate;
 import org.iushu.market.trade.okx.OkxWebSocketSession;
 import org.iushu.market.trade.okx.PacketUtils;
@@ -66,7 +65,7 @@ public class Terminator implements ApplicationContextAware {
         cancelLiveOrders(session);
         firstPx.set(0.0);
         orderStateMap.clear();
-        eventPublisher.publishEvent(new OrderClosedEvent(null));
+        eventPublisher.publishEvent(new OrderClosedEvent(data));
     }
 
     // can be merged to onOrderClosed(..)
