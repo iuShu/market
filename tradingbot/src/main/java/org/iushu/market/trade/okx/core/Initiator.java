@@ -130,10 +130,12 @@ public class Initiator implements ApplicationContextAware {
     }
 
     @EventListener(OrderClosedEvent.class)
-    public void onOrderClose() {
+    public void onOrderClose(OrderClosedEvent event) {
         taskScheduler.schedule(() -> existed.compareAndSet(true, false), new Date(System.currentTimeMillis() + 5000));
         refreshAccountBalance();
-        logger.info("{} batch order closed, balance {}, ready to next round", batch.getAndIncrement(), balance);
+        JSONObject data = (JSONObject) event.getSource();
+        String pnl = data.getString("pnl");
+        logger.info("{} batch order closed, balance {} {}, ready to next round", batch.getAndIncrement(), balance, pnl);
     }
 
     private void refreshAccountBalance() {

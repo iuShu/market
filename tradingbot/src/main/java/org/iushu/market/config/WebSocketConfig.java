@@ -65,12 +65,7 @@ public class WebSocketConfig {
     public void connect(ApplicationReadyEvent event) {
         ConfigurableApplicationContext context = event.getApplicationContext();
         Map<String, TradingWebSocketClient> clients = context.getBeansOfType(TradingWebSocketClient.class);
-        try {
-            clients.values().forEach(TradingWebSocketClient::doHandshake);
-        } catch (Exception e) {
-            e.printStackTrace();
-            context.close();
-        }
+        clients.values().forEach(TradingWebSocketClient::doHandshake);
     }
 
     @Autowired

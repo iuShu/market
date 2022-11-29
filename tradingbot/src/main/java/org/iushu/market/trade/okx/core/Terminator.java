@@ -21,9 +21,11 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.iushu.market.Constants.ORDER_STATE_FILLED;
@@ -45,6 +47,8 @@ public class Terminator implements ApplicationContextAware {
     private volatile PosSide posSide;
     private volatile String messageId = "";
     private final AtomicReference<Double> firstPx = new AtomicReference<>(0.0);
+    private final List<Double> prices = new CopyOnWriteArrayList<>();
+    private boolean test = true;
 
     public Terminator(TradingProperties properties, OkxRestTemplate restTemplate) {
         this.properties = properties;
@@ -82,24 +86,38 @@ public class Terminator implements ApplicationContextAware {
 
     @SubscribeChannel(channel = CHANNEL_TICKERS)
     public void takeProfitCheck(JSONObject message) {
-        if (posSide == null)
+        if (posSide == null || firstPx.get() == 0)
             return;
 
         JSONArray data = message.getJSONArray("data");
         JSONObject ticker = data.getJSONObject(0);
         double price = ticker.getDoubleValue("last");
         double tpPx = takeProfitPrice(firstPx.get(), orderPos, posSide, properties.getOrder());
-        if (!posSide.isProfit(tpPx, price))
+        if (test && !tpCheckOnTest(price, tpPx))
+            return;
+        if (!test && !posSide.isProfit(tpPx, price))
             return;
 
         if (!restTemplate.closePosition(posSide)) {
-            String errMsg = String.format("close pos error by rest api at %s", price);
+            String errMsg = String.format("close pos error %s %s", price, posSide.getName());
             logger.error(errMsg);
-            eventPublisher.publishEvent(new OrderErrorEvent(errMsg));
+//            eventPublisher.publishEvent(new OrderErrorEvent(errMsg));
         }
         else {
             logger.info("close pos by take profit at {} {}", price, orderPos);
         }
+    }
+
+    private boolean tpCheckOnTest(double px, double tpPx) {
+        if (prices.size() >= 5)
+            prices.remove(0);
+        prices.add(px);
+
+        for (Double price : prices) {
+            if (!posSide.isProfit(tpPx, price))
+                return false;
+        }
+        return true;
     }
 
     private void cancelLiveOrders(OkxWebSocketSession session) {
@@ -141,5 +159,6 @@ public class Terminator implements ApplicationContextAware {
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.eventPublisher = applicationContext;
+        this.test = 1 == Arrays.stream(applicationContext.getEnvironment().getActiveProfiles()).filter(p -> p.equals("test")).count();
     }
 }

@@ -70,20 +70,23 @@ public class Guard implements ApplicationContextAware {
         double tpPx = data.getDoubleValue("_tpPx");
         double slPx = data.getDoubleValue("_slPx");
         JSONObject response = restTemplate.placeAlgoOrder(posSide, posSide.closeSide(), totalPos, tpPx, slPx);
+        if (response.isEmpty())     // retry
+            response = restTemplate.placeAlgoOrder(posSide, posSide.closeSide(), totalPos, tpPx, slPx);
         if (!response.isEmpty()) {
             algoId = response.getString("algoId");
-            logger.info("placed algo {} tp={} sl={}", totalPos, tpPx, slPx);
+            logger.info("placed algo {} tp={} sl={} {}", totalPos, tpPx, slPx, algoId);
             return;
         }
 
         String errMsg = String.format("place algo failed for %s", px);
         logger.error(errMsg);
-        eventPublisher.publishEvent(new OrderErrorEvent(errMsg));
+//        eventPublisher.publishEvent(new OrderErrorEvent(errMsg));
     }
 
     private boolean cancelPreviousAlgo() {
         if (restTemplate.cancelAlgoOrder(algoId)) {
             logger.info("canceled previous algo {}", algoId);
+            algoId = "";
             return true;
         }
 

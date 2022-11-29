@@ -12,6 +12,7 @@ import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.core.task.TaskRejectedException;
 import org.springframework.web.socket.*;
 import org.springframework.web.socket.client.WebSocketClient;
 
@@ -45,7 +46,11 @@ public class ChannelWebSocketHandler implements WebSocketHandler, ApplicationCon
         logger.debug("{}", message.getPayload().toString());
         if (message instanceof TextMessage) {
             JSONObject payload = JSONObject.parseObject(message.getPayload().toString());
-            this.eventPublisher.publishEvent(new ChannelMessagingEvent<>(session, payload));
+            try {
+                this.eventPublisher.publishEvent(new ChannelMessagingEvent<>(session, payload));
+            } catch (TaskRejectedException e) {
+                logger.warn("messaging task rejected");
+            }
         }
         else if (message instanceof PongMessage) {
             // ignore

@@ -8,7 +8,7 @@ import org.springframework.scheduling.TaskScheduler;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
-import java.time.Duration;
+import java.util.Date;
 import java.util.LinkedList;
 import java.util.Queue;
 
@@ -72,11 +72,17 @@ public class RobotNotifier implements Notifier {
             return false;
 
         pendingQueue.offer(message);
-        taskScheduler.scheduleAtFixedRate(() -> {
+        scheduleSendPending();
+        return true;
+    }
+
+    private void scheduleSendPending() {
+        taskScheduler.schedule(() -> {
             if (send(pendingQueue.peek(), false))
                 pendingQueue.poll();
-        }, Duration.ofMillis(1000));
-        return true;
+            else
+                scheduleSendPending();
+        }, new Date(System.currentTimeMillis() + 1000));
     }
 
 }

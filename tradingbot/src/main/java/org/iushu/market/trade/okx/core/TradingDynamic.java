@@ -18,8 +18,8 @@ import java.time.format.DateTimeFormatter;
 @OkxComponent
 public class TradingDynamic {
 
-    private Notifier notifier;
-    private DispatchManager manager;
+    private final Notifier notifier;
+    private final DispatchManager manager;
 
     public TradingDynamic(Notifier notifier, DispatchManager manager) {
         this.notifier = notifier;

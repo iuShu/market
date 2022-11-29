@@ -27,6 +27,7 @@ import org.springframework.web.socket.config.annotation.EnableWebSocket;
 
 import javax.net.ssl.SSLContext;
 
+import static org.springframework.boot.autoconfigure.task.TaskExecutionAutoConfiguration.APPLICATION_TASK_EXECUTOR_BEAN_NAME;
 import static org.springframework.context.support.AbstractApplicationContext.APPLICATION_EVENT_MULTICASTER_BEAN_NAME;
 
 @EnableAsync
@@ -62,7 +63,7 @@ public class ApplicationConfig {
     public void onReady(ApplicationReadyEvent event) {
         ConfigurableApplicationContext context = event.getApplicationContext();
         SimpleApplicationEventMulticaster multicaster = context.getBean(APPLICATION_EVENT_MULTICASTER_BEAN_NAME, SimpleApplicationEventMulticaster.class);
-        TaskExecutor executor = context.getBean(TaskExecutor.class);
+        TaskExecutor executor = context.getBean(APPLICATION_TASK_EXECUTOR_BEAN_NAME, TaskExecutor.class);
         multicaster.setTaskExecutor(executor);
     }
 
