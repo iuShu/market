@@ -43,7 +43,7 @@ public class Terminator implements ApplicationContextAware {
     private ApplicationEventPublisher eventPublisher;
 
     private final Map<String, String> orderStateMap;
-    private volatile int orderPos;
+    private volatile int orderContractSize;
     private volatile PosSide posSide;
     private volatile String messageId = "";
     private final AtomicReference<Double> firstPx = new AtomicReference<>(0.0);
@@ -77,8 +77,8 @@ public class Terminator implements ApplicationContextAware {
     @EventListener(OrderFilledEvent.class)
     public void recordOrderFilled(OrderFilledEvent event) {
         JSONObject data = (JSONObject) event.getSource();
-        orderPos = data.getIntValue("sz", -1);
-        if (orderPos == properties.getOrder().getPosStart()) {
+        orderContractSize = data.getIntValue("sz", -1);
+        if (orderContractSize == properties.getOrder().getFirstContractSize()) {
             posSide = PosSide.of(data.getString("posSide"));
             firstPx.set(data.getDoubleValue("fillPx"));
         }
@@ -92,7 +92,7 @@ public class Terminator implements ApplicationContextAware {
         JSONArray data = message.getJSONArray("data");
         JSONObject ticker = data.getJSONObject(0);
         double price = ticker.getDoubleValue("last");
-        double tpPx = takeProfitPrice(firstPx.get(), orderPos, posSide, properties.getOrder());
+        double tpPx = takeProfitPrice(firstPx.get(), orderContractSize, posSide, properties.getOrder());
         if (test && !tpCheckOnTest(price, tpPx))
             return;
         if (!test && !posSide.isProfit(tpPx, price))
@@ -104,7 +104,7 @@ public class Terminator implements ApplicationContextAware {
 //            eventPublisher.publishEvent(new OrderErrorEvent(errMsg));
         }
         else {
-            logger.info("close pos by take profit at {} {}", price, orderPos);
+            logger.info("close pos by take profit at {} {}", price, orderContractSize);
         }
     }
 

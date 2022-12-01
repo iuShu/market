@@ -36,8 +36,8 @@ public class PacketUtils {
     }
 
     public static JSONObject placeOrderPacket(TradingProperties properties, String side, PosSide posSide,
-                                              String ordType, int pos, double px) {
-        JSONObject orderPacket = orderPacket(properties, side, posSide, ordType, pos, px);
+                                              String ordType, int contractSize, double px) {
+        JSONObject orderPacket = orderPacket(properties, side, posSide, ordType, contractSize, px);
         JSONArray args = JSONArray.of(orderPacket);
         JSONObject packet = JSONObject.of("op", OP_ORDER);
         packet.put("id", Long.toString(identifier()));
@@ -46,13 +46,13 @@ public class PacketUtils {
     }
 
     public static JSONObject orderPacket(TradingProperties properties, String side, PosSide posSide,
-                                         String ordType, int pos, double px) {
+                                         String ordType, int contractSize, double px) {
         JSONObject data = JSONObject.of("instId", properties.getInstId());
         data.put("tdMode", properties.getTdMode());
         data.put("side", side);
         data.put("posSide", posSide.getName());
         data.put("ordType", ordType);
-        data.put("sz", pos);
+        data.put("sz", contractSize);
         if (px > 0)
             data.put("px", Double.toString(px));
         return data;

@@ -4,37 +4,37 @@ import java.util.List;
 
 public class OrderProperties {
 
-    private int posBase;
-    private int posStart;
-    private int posIncrementRate;
+    private double faceValue;
+    private int firstContractSize;
+    private int contractIncrementRate;
     private int maxOrder;
     private List<Double> followRates;
     private List<Double> pullbackRates;
     private double makerFeeRate;
     private double takerFeeRate;
 
-    public int getPosBase() {
-        return posBase;
+    public double getFaceValue() {
+        return faceValue;
     }
 
-    public void setPosBase(int posBase) {
-        this.posBase = posBase;
+    public void setFaceValue(double faceValue) {
+        this.faceValue = faceValue;
     }
 
-    public int getPosStart() {
-        return posStart;
+    public int getFirstContractSize() {
+        return firstContractSize;
     }
 
-    public void setPosStart(int posStart) {
-        this.posStart = posStart;
+    public void setFirstContractSize(int firstContractSize) {
+        this.firstContractSize = firstContractSize;
     }
 
-    public int getPosIncrementRate() {
-        return posIncrementRate;
+    public int getContractIncrementRate() {
+        return contractIncrementRate;
     }
 
-    public void setPosIncrementRate(int posIncrementRate) {
-        this.posIncrementRate = posIncrementRate;
+    public void setContractIncrementRate(int contractIncrementRate) {
+        this.contractIncrementRate = contractIncrementRate;
     }
 
     public int getMaxOrder() {

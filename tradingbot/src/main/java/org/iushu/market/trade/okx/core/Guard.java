@@ -31,7 +31,7 @@ public class Guard implements ApplicationContextAware {
     private ApplicationEventPublisher eventPublisher;
 
     private volatile double firstPx = 0.0;
-    private volatile String algoId = "";
+    private volatile String algoId = "";    // TODO handle this field with high frequently modification
 
     public Guard(TradingProperties properties, OkxRestTemplate restTemplate) {
         this.properties = properties;
@@ -41,7 +41,7 @@ public class Guard implements ApplicationContextAware {
     @SubscribeChannel(channel = CHANNEL_ORDERS)
     public void onOrderFilled(JSONObject message) {
         JSONObject data = message.getJSONArray("data").getJSONObject(0);
-        int pos = data.getIntValue("sz", -1);
+        int contractSize = data.getIntValue("sz", -1);
         String side = data.getString("side");
         String state = data.getString("state");
         PosSide posSide = PosSide.of(data.getString("posSide"));
@@ -49,32 +49,32 @@ public class Guard implements ApplicationContextAware {
             return;
 
         double px = data.getDoubleValue("fillPx");
-        if (pos == properties.getOrder().getPosStart())
+        if (contractSize == properties.getOrder().getFirstContractSize())
             firstPx = px;
 
-        if (data.getDoubleValue("fillSz") < pos)    // partial filled
+        if (data.getDoubleValue("fillSz") < contractSize)    // partial filled
             return;
 
-        data.put("_ttlPos", totalPosition(pos, properties.getOrder()));
-        data.put("_tpPx", takeProfitPrice(firstPx, pos, posSide, properties.getOrder()));
+        data.put("_ttlCs", totalContractSize(contractSize, properties.getOrder()));
+        data.put("_tpPx", takeProfitPrice(firstPx, contractSize, posSide, properties.getOrder()));
         data.put("_slPx", stopLossPrice(firstPx, posSide, properties.getOrder()));
         eventPublisher.publishEvent(new OrderFilledEvent(data));
-        placeAlgoOrder(data, pos, posSide);
+        placeAlgoOrder(data, contractSize, posSide);
     }
 
     private void placeAlgoOrder(JSONObject data, double px, PosSide posSide) {
         if (algoId.length() > 0 && !cancelPreviousAlgo())
             return;
 
-        int totalPos = data.getIntValue("_ttlPos", -1);
+        int ttlCs = data.getIntValue("_ttlCs", -1);
         double tpPx = data.getDoubleValue("_tpPx");
         double slPx = data.getDoubleValue("_slPx");
-        JSONObject response = restTemplate.placeAlgoOrder(posSide, posSide.closeSide(), totalPos, tpPx, slPx);
+        JSONObject response = restTemplate.placeAlgoOrder(posSide, posSide.closeSide(), ttlCs, tpPx, slPx);
         if (response.isEmpty())     // retry
-            response = restTemplate.placeAlgoOrder(posSide, posSide.closeSide(), totalPos, tpPx, slPx);
+            response = restTemplate.placeAlgoOrder(posSide, posSide.closeSide(), ttlCs, tpPx, slPx);
         if (!response.isEmpty()) {
             algoId = response.getString("algoId");
-            logger.info("placed algo {} tp={} sl={} {}", totalPos, tpPx, slPx, algoId);
+            logger.info("placed algo {} tp={} sl={} {}", ttlCs, tpPx, slPx, algoId);
             return;
         }
 

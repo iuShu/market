@@ -42,11 +42,11 @@ public class Tracker implements ApplicationContextAware {
     @SubscribeChannel(channel = CHANNEL_ORDERS)
     public void onFirstOrderFilled(OkxWebSocketSession session, JSONObject message) {
         JSONObject data = message.getJSONArray("data").getJSONObject(0);
-        int pos = data.getIntValue("sz", -1);
+        int contractSize = data.getIntValue("sz", -1);
         String state = data.getString("state");
         String side = data.getString("side");
         PosSide posSide = PosSide.of(data.getString("posSide"));
-        if (pos != properties.getOrder().getPosStart() || !ORDER_STATE_FILLED.equals(state) || !side.equals(posSide.openSide()))
+        if (contractSize != properties.getOrder().getFirstContractSize() || !ORDER_STATE_FILLED.equals(state) || !side.equals(posSide.openSide()))
             return;
 
         firstPx = data.getDoubleValue("fillPx");
@@ -57,10 +57,10 @@ public class Tracker implements ApplicationContextAware {
     private void placeFollowOrders(OkxWebSocketSession session, PosSide posSide) {
         List<JSONObject> packets = new ArrayList<>();
         for (int i = 0; i < properties.getOrder().getMaxOrder() - 1; i++) {
-            int pos = orderPos(i, properties.getOrder());
-            double nextOrderPrice = nextOrderPrice(firstPx, pos, posSide, properties.getOrder());
-            pos = nextPosition(pos, properties.getOrder());
-            packets.add(PacketUtils.orderPacket(properties, posSide.openSide(), posSide, ORDER_TYPE_LIMIT, pos, nextOrderPrice));
+            int cs = contractSize(i, properties.getOrder());
+            double nextOrderPrice = nextOrderPrice(firstPx, cs, posSide, properties.getOrder());
+            cs = nextContractSize(cs, properties.getOrder());
+            packets.add(PacketUtils.orderPacket(properties, posSide.openSide(), posSide, ORDER_TYPE_LIMIT, cs, nextOrderPrice));
         }
         JSONObject packet = PacketUtils.placeOrdersPacket(packets);
         if (session.sendPrivateMessage(packet)) {
@@ -74,9 +74,7 @@ public class Tracker implements ApplicationContextAware {
     }
 
     private void addMarginBalance() {
-
-
-
+        // not implemented
     }
 
     @SubscribeChannel(op = OP_BATCH_ORDERS)

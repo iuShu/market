@@ -101,7 +101,6 @@ public class TradingProperties {
         private String secret;
         private String passphrase;
 
-
         public String getApi() {
             return api;
         }
@@ -109,7 +108,6 @@ public class TradingProperties {
         public void setApi(String api) {
             this.api = api;
         }
-
 
         public String getWsPublicUrl() {
             return wsPublicUrl;
@@ -119,7 +117,6 @@ public class TradingProperties {
             this.wsPublicUrl = wsPublicUrl;
         }
 
-
         public String getWsPrivateUrl() {
             return wsPrivateUrl;
         }
@@ -127,7 +124,6 @@ public class TradingProperties {
         public void setWsPrivateUrl(String wsPrivateUrl) {
             this.wsPrivateUrl = wsPrivateUrl;
         }
-
 
         public String getApiKey() {
             return apiKey;
@@ -137,7 +133,6 @@ public class TradingProperties {
             this.apiKey = apiKey;
         }
 
-
         public String getSecret() {
             return secret;
         }
@@ -145,7 +140,6 @@ public class TradingProperties {
         public void setSecret(String secret) {
             this.secret = secret;
         }
-
 
         public String getPassphrase() {
             return passphrase;
@@ -177,7 +171,6 @@ public class TradingProperties {
         private String secret;
         private String passphrase;
 
-
         public String getApi() {
             return api;
         }
@@ -185,7 +178,6 @@ public class TradingProperties {
         public void setApi(String api) {
             this.api = api;
         }
-
 
         public String getWsPublicUrl() {
             return wsPublicUrl;
@@ -195,7 +187,6 @@ public class TradingProperties {
             this.wsPublicUrl = wsPublicUrl;
         }
 
-
         public String getWsPrivateUrl() {
             return wsPrivateUrl;
         }
@@ -203,7 +194,6 @@ public class TradingProperties {
         public void setWsPrivateUrl(String wsPrivateUrl) {
             this.wsPrivateUrl = wsPrivateUrl;
         }
-
 
         public String getApiKey() {
             return apiKey;
@@ -213,7 +203,6 @@ public class TradingProperties {
             this.apiKey = apiKey;
         }
 
-
         public String getSecret() {
             return secret;
         }
@@ -221,7 +210,6 @@ public class TradingProperties {
         public void setSecret(String secret) {
             this.secret = secret;
         }
-
 
         public String getPassphrase() {
             return passphrase;

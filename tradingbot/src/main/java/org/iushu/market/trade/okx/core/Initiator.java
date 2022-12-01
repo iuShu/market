@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.iushu.market.Constants.ORDER_TYPE_MARKET;
-import static org.iushu.market.trade.MartinOrderUtils.lastPos;
+import static org.iushu.market.trade.MartinOrderUtils.lastContractSize;
 import static org.iushu.market.trade.MartinOrderUtils.totalCost;
 import static org.iushu.market.trade.okx.OkxConstants.*;
 
@@ -86,7 +86,7 @@ public class Initiator implements ApplicationContextAware {
         if (posSide == null)
             return;
 
-        double cost = totalCost(price, lastPos(properties.getOrder()), posSide, properties.getLever(), properties.getOrder());
+        double cost = totalCost(price, lastContractSize(properties.getOrder()), posSide, properties.getLever(), properties.getOrder());
         if (balance < cost) {
             String errMsg = String.format("account balance not enough for cost %s", cost);
             logger.error(errMsg);
@@ -96,13 +96,13 @@ public class Initiator implements ApplicationContextAware {
 
         logger.debug("recommend {}", posSide.getName());
         JSONObject packet = PacketUtils.placeOrderPacket(properties, posSide.openSide(), posSide, ORDER_TYPE_MARKET,
-                properties.getOrder().getPosStart(), 0.0);
+                properties.getOrder().getFirstContractSize(), 0.0);
 
         if (existed.get() || !existed.compareAndSet(false, true))
             return;
 
         if (session.sendPrivateMessage(packet)) {
-            logger.info("sent first order {} {}", price, properties.getOrder().getPosStart());
+            logger.info("sent first order {} {}", price, properties.getOrder().getFirstContractSize());
             messageId = packet.getString("id");
         }
         else {

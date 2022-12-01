@@ -132,13 +132,13 @@ public class OkxRestTemplate implements ApplicationContextAware {
         return checkResp(post(OkxConstants.SET_LEVER, entity), "set leverage");
     }
 
-    public JSONObject placeAlgoOrder(PosSide posSide, String side, int totalPos, double tpPrice, double slPrice) {
+    public JSONObject placeAlgoOrder(PosSide posSide, String side, int totalContractSize, double tpPrice, double slPrice) {
         JSONObject body = JSONObject.of("instId", properties.getInstId());
         body.put("tdMode", properties.getTdMode());
         body.put("posSide", posSide.getName());
         body.put("side", side);
         body.put("ordType", ALGO_TYPE_OCO);
-        body.put("sz", String.valueOf(totalPos));
+        body.put("sz", String.valueOf(totalContractSize));
         body.put("tpTriggerPxType", ALGO_PX_TYPE_LAST);
         body.put("tpTriggerPx", Double.toString(tpPrice));
         body.put("tpOrdPx", "-1");

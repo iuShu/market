@@ -31,15 +31,15 @@ public class TradingDynamic {
         JSONObject data = (JSONObject) event.getSource();
 
         String fillPx = data.getString("fillPx");
-        String pos = data.getString("sz");
+        String contractSize = data.getString("sz");
         PosSide posSide = PosSide.of(data.getString("posSide"));
-        int ttlPos = data.getIntValue("_ttlPos", -1);
+        int ttlCs = data.getIntValue("_ttlCs", -1);
         double tpPx = data.getDoubleValue("_tpPx");
         double slPx = data.getDoubleValue("_slPx");
 
         StringBuilder template = new StringBuilder("#### **Order Filled**\n----\n");
-        template.append(String.format("filled at %s %s %s %s\n\n", fillPx, pos, posSide.getName(), posSide.openSide()));
-        template.append(String.format("%d tp=%s sl=%s\n", ttlPos, tpPx, slPx));
+        template.append(String.format("filled at %s %s %s %s\n\n", fillPx, contractSize, posSide.getName(), posSide.openSide()));
+        template.append(String.format("%d tp=%s sl=%s\n", ttlCs, tpPx, slPx));
         template.append("\n----\n").append(currentTime());
         notifier.notify("Order Filled", template.toString());
     }

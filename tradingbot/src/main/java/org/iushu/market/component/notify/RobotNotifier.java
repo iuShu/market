@@ -11,6 +11,7 @@ import org.springframework.web.client.RestTemplate;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.Queue;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Component("robotNotifier")
 @ConditionalOnProperty(name = "trade.notify.robot")
@@ -22,6 +23,7 @@ public class RobotNotifier implements Notifier {
 
     private final Queue<Long> sentQueue = new LinkedList<>();
     private final Queue<JSONObject> pendingQueue = new LinkedList<>();
+    private final AtomicInteger index = new AtomicInteger(0);
 
     public RobotNotifier(RestTemplate restTemplate, TradingProperties properties, TaskScheduler taskScheduler) {
         this.restTemplate = restTemplate;
@@ -31,7 +33,7 @@ public class RobotNotifier implements Notifier {
 
     @Override
     public void notify(String title, String content) {
-        JSONObject body = JSONObject.of("title", title, "text", content);
+        JSONObject body = JSONObject.of("title", title, "text", appendIndex(content));
         JSONObject message = JSONObject.of("msgtype", "markdown", "markdown", body);
         send(message, true);
     }
@@ -43,7 +45,7 @@ public class RobotNotifier implements Notifier {
         if (pendingQueue.size() > 0) {
             JSONObject markdown = message.getJSONObject("markdown");
             String text = markdown.getString("text");
-            markdown.put("text", text + " (" + pendingQueue.size() + ")");
+            markdown.put("text", appendPendingSize(text));
         }
 
         long timestamp = System.currentTimeMillis();
@@ -83,6 +85,14 @@ public class RobotNotifier implements Notifier {
             else
                 scheduleSendPending();
         }, new Date(System.currentTimeMillis() + 1000));
+    }
+
+    private String appendIndex(String content) {
+        return content + " [" + index.incrementAndGet() + "]";
+    }
+
+    private String appendPendingSize(String content) {
+        return content + " (" + pendingQueue.size() + ")";
     }
 
 }

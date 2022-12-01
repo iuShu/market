@@ -37,6 +37,7 @@ public class ChannelWebSocketHandler implements WebSocketHandler, ApplicationCon
     @Override
     public void afterConnectionEstablished(WebSocketSession session) {
         logger.info("connect established {}", websocketUrl);
+        reconnectTimes = 0;
         this.session = session;
         this.eventPublisher.publishEvent(new ChannelOpenedEvent<>(this, session));
     }
