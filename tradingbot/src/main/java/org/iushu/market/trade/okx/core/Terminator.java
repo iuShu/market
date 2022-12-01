@@ -80,7 +80,7 @@ public class Terminator implements ApplicationContextAware {
         orderContractSize = data.getIntValue("sz", -1);
         if (orderContractSize == properties.getOrder().getFirstContractSize()) {
             posSide = PosSide.of(data.getString("posSide"));
-            firstPx.set(data.getDoubleValue("fillPx"));
+            firstPx.set(data.getDoubleValue("avgPx"));
         }
     }
 

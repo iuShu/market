@@ -31,7 +31,7 @@ public class Guard implements ApplicationContextAware {
     private ApplicationEventPublisher eventPublisher;
 
     private volatile double firstPx = 0.0;
-    private volatile String algoId = "";    // TODO handle this field with high frequently modification
+    private volatile String algoId = "";
 
     public Guard(TradingProperties properties, OkxRestTemplate restTemplate) {
         this.properties = properties;
@@ -42,18 +42,20 @@ public class Guard implements ApplicationContextAware {
     public void onOrderFilled(JSONObject message) {
         JSONObject data = message.getJSONArray("data").getJSONObject(0);
         int contractSize = data.getIntValue("sz", -1);
+        double accFillSz = data.getDoubleValue("accFillSz");
         String side = data.getString("side");
         String state = data.getString("state");
         PosSide posSide = PosSide.of(data.getString("posSide"));
         if (!state.equals(ORDER_STATE_FILLED) || !side.equals(posSide.openSide()))
             return;
 
-        double px = data.getDoubleValue("fillPx");
+        logger.info("filled data {}", data);    // dev
+        if (accFillSz < contractSize)           // filter partial filled
+            return;
+
+        double px = data.getDoubleValue("avgPx");
         if (contractSize == properties.getOrder().getFirstContractSize())
             firstPx = px;
-
-        if (data.getDoubleValue("fillSz") < contractSize)    // partial filled
-            return;
 
         data.put("_ttlCs", totalContractSize(contractSize, properties.getOrder()));
         data.put("_tpPx", takeProfitPrice(firstPx, contractSize, posSide, properties.getOrder()));
@@ -79,7 +81,7 @@ public class Guard implements ApplicationContextAware {
         }
 
         String errMsg = String.format("place algo failed for %s", px);
-        logger.error(errMsg);
+        logger.warn(errMsg);
 //        eventPublisher.publishEvent(new OrderErrorEvent(errMsg));
     }
 
@@ -91,8 +93,8 @@ public class Guard implements ApplicationContextAware {
         }
 
         String errMsg = String.format("cancel previous algo failed %s", algoId);
-        logger.error(errMsg);
-        eventPublisher.publishEvent(new OrderErrorEvent(errMsg));
+        logger.warn(errMsg);
+//        eventPublisher.publishEvent(new OrderErrorEvent(errMsg));
         return false;
     }
 

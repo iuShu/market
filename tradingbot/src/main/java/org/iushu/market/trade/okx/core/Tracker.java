@@ -43,13 +43,15 @@ public class Tracker implements ApplicationContextAware {
     public void onFirstOrderFilled(OkxWebSocketSession session, JSONObject message) {
         JSONObject data = message.getJSONArray("data").getJSONObject(0);
         int contractSize = data.getIntValue("sz", -1);
+        double accFillSz = data.getDoubleValue("accFillSz");
         String state = data.getString("state");
         String side = data.getString("side");
         PosSide posSide = PosSide.of(data.getString("posSide"));
-        if (contractSize != properties.getOrder().getFirstContractSize() || !ORDER_STATE_FILLED.equals(state) || !side.equals(posSide.openSide()))
+        if (contractSize != properties.getOrder().getFirstContractSize() || accFillSz < contractSize
+                || !ORDER_STATE_FILLED.equals(state) || !side.equals(posSide.openSide()))
             return;
 
-        firstPx = data.getDoubleValue("fillPx");
+        firstPx = data.getDoubleValue("avgPx");
         placeFollowOrders(session, posSide);
         addMarginBalance();
     }

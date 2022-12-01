@@ -30,8 +30,11 @@ public class Recorder {
         JSONObject data = message.getJSONArray("data").getJSONObject(0);
         String state = data.getString("state");
         String activity = STATE_DESC.get(state);
-        activity = activity == null ? state : activity;
-        String px = ORDER_STATE_FILLED.equals(state) ? data.getString("fillPx") : data.getString("px");
+        if (activity == null) {
+            logger.warn("unknown state data {}", data);
+            activity = state;
+        }
+        String px = ORDER_STATE_FILLED.equals(state) ? data.getString("avgPx") : data.getString("px");
         String side = data.getString("side");
         String ordId = data.getString("ordId");
         String posSide = data.getString("posSide");

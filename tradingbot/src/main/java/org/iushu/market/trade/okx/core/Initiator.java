@@ -108,7 +108,7 @@ public class Initiator implements ApplicationContextAware {
         else {
             String errMsg = "send first order failed";
             logger.warn(errMsg);
-            eventPublisher.publishEvent(new OrderErrorEvent(errMsg));
+//            eventPublisher.publishEvent(new OrderErrorEvent(errMsg));
         }
     }
 
@@ -126,7 +126,7 @@ public class Initiator implements ApplicationContextAware {
         }
 
         logger.error("place first order failed {}", message.toString());
-        eventPublisher.publishEvent(new OrderErrorEvent(message));
+//        eventPublisher.publishEvent(new OrderErrorEvent(message));
     }
 
     @EventListener(OrderClosedEvent.class)

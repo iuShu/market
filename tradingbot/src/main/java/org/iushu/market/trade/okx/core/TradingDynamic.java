@@ -8,6 +8,8 @@ import org.iushu.market.trade.okx.config.OkxComponent;
 import org.iushu.market.trade.okx.event.OrderClosedEvent;
 import org.iushu.market.trade.okx.event.OrderErrorEvent;
 import org.iushu.market.trade.okx.event.OrderFilledEvent;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.event.EventListener;
 
 import java.time.Instant;
@@ -17,6 +19,8 @@ import java.time.format.DateTimeFormatter;
 
 @OkxComponent
 public class TradingDynamic {
+
+    private static final Logger logger = LoggerFactory.getLogger(TradingDynamic.class);
 
     private final Notifier notifier;
     private final DispatchManager manager;
@@ -30,7 +34,7 @@ public class TradingDynamic {
     public void notifyOrderFilled(OrderFilledEvent event) {
         JSONObject data = (JSONObject) event.getSource();
 
-        String fillPx = data.getString("fillPx");
+        String fillPx = data.getString("avgPx");
         String contractSize = data.getString("sz");
         PosSide posSide = PosSide.of(data.getString("posSide"));
         int ttlCs = data.getIntValue("_ttlCs", -1);
@@ -41,6 +45,7 @@ public class TradingDynamic {
         template.append(String.format("filled at %s %s %s %s\n\n", fillPx, contractSize, posSide.getName(), posSide.openSide()));
         template.append(String.format("%d tp=%s sl=%s\n", ttlCs, tpPx, slPx));
         template.append("\n----\n").append(currentTime());
+        logger.info("notify order filled {} {}", fillPx, contractSize);
         notifier.notify("Order Filled", template.toString());
     }
 
