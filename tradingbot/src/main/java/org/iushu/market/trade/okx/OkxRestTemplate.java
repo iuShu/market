@@ -169,6 +169,16 @@ public class OkxRestTemplate implements ApplicationContextAware {
         return checkResp(response, "close position");
     }
 
+    public boolean addExtraMargin(PosSide posSide, double amount) {
+        JSONObject body = JSONObject.of("instId", properties.getInstId());
+        body.put("posSide", posSide.getName());
+        body.put("type", "add");
+        body.put("amt", Double.toString(amount));
+        HttpEntity<JSONObject> entity = entity(HttpMethod.POST, OkxConstants.ADD_MARGIN, body);
+        JSONObject response = post(OkxConstants.ADD_MARGIN, entity);
+        return checkResp(response, "add extra margin");
+    }
+
     private static boolean checkResp(JSONObject response, String topic) {
         if (response != null && response.getIntValue("code", -1) == 0)
             return true;

@@ -8,6 +8,7 @@ public class OrderProperties {
     private int firstContractSize;
     private int contractIncrementRate;
     private int maxOrder;
+    private double extraMargin;
     private List<Double> followRates;
     private List<Double> pullbackRates;
     private double makerFeeRate;
@@ -43,6 +44,14 @@ public class OrderProperties {
 
     public void setMaxOrder(int maxOrder) {
         this.maxOrder = maxOrder;
+    }
+
+    public double getExtraMargin() {
+        return extraMargin;
+    }
+
+    public void setExtraMargin(double extraMargin) {
+        this.extraMargin = extraMargin;
     }
 
     public List<Double> getFollowRates() {

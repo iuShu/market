@@ -34,6 +34,7 @@ public interface OkxConstants {
     String GET_LEVER = "/api/v5/account/leverage-info";
     String SET_LEVER = "/api/v5/account/set-leverage";
     String GET_BALANCE = "/api/v5/account/balance";
+    String ADD_MARGIN = "/api/v5/account/position/margin-balance";
 
     String PLACE_ALGO = "/api/v5/trade/order-algo";
     String CANCEL_ALGO = "/api/v5/trade/cancel-algos";

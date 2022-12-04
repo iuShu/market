@@ -6,7 +6,7 @@ spring:
 
 logging:
   level:
-    root: debug
+    root: info
 
 websocket:
   reconnectTime: 5
@@ -18,13 +18,14 @@ trade:
   instType: SWAP
   instId: ${trade.inst}-${trade.currency}-${trade.instType}
   tdMode: isolated
-  lever: 80
+  lever: 60
 
   order:
-    posBase: 1000
-    posStart: 10
-    posIncrementRate: 2
+    faceValue: 0.001
+    firstContractSize: 10
+    contractIncrementRate: 2
     maxOrder: 8
+    extraMargin: 50
     followRates:
       - 0.006
       - 0.012

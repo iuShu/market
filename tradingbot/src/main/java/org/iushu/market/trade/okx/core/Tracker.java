@@ -4,6 +4,7 @@ import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import org.iushu.market.config.TradingProperties;
 import org.iushu.market.trade.PosSide;
+import org.iushu.market.trade.okx.OkxRestTemplate;
 import org.iushu.market.trade.okx.OkxWebSocketSession;
 import org.iushu.market.trade.okx.PacketUtils;
 import org.iushu.market.trade.okx.config.OkxComponent;
@@ -30,13 +31,15 @@ public class Tracker implements ApplicationContextAware {
     private static final Logger logger = LoggerFactory.getLogger(Tracker.class);
 
     private final TradingProperties properties;
+    private final OkxRestTemplate restTemplate;
     private ApplicationEventPublisher eventPublisher;
 
     private volatile double firstPx = 0.0;
     private volatile String messageId = "";
 
-    public Tracker(TradingProperties properties) {
+    public Tracker(TradingProperties properties, OkxRestTemplate restTemplate) {
         this.properties = properties;
+        this.restTemplate = restTemplate;
     }
 
     @SubscribeChannel(channel = CHANNEL_ORDERS)
@@ -53,7 +56,7 @@ public class Tracker implements ApplicationContextAware {
 
         firstPx = data.getDoubleValue("avgPx");
         placeFollowOrders(session, posSide);
-        addMarginBalance();
+        addMarginBalance(posSide);
     }
 
     private void placeFollowOrders(OkxWebSocketSession session, PosSide posSide) {
@@ -75,8 +78,12 @@ public class Tracker implements ApplicationContextAware {
         eventPublisher.publishEvent(new OrderErrorEvent(errMsg));
     }
 
-    private void addMarginBalance() {
-        // not implemented
+    private void addMarginBalance(PosSide posSide) {
+        double extraMargin = properties.getOrder().getExtraMargin();
+        if (restTemplate.addExtraMargin(posSide, extraMargin))
+            logger.info("add extra margin {} success", extraMargin);
+        else
+            logger.warn("add extra margin {} failed", extraMargin);
     }
 
     @SubscribeChannel(op = OP_BATCH_ORDERS)
