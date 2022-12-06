@@ -3,6 +3,7 @@ package org.iushu.market.trade.okx;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import org.apache.tomcat.util.buf.StringUtils;
+import org.iushu.market.Constants;
 import org.iushu.market.component.JSONArrayAdapter;
 import org.iushu.market.component.Signature;
 import org.iushu.market.config.TradingProperties;
@@ -13,9 +14,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
@@ -29,7 +32,8 @@ import java.util.List;
 import static org.iushu.market.Constants.ALGO_PX_TYPE_LAST;
 import static org.iushu.market.Constants.ALGO_TYPE_OCO;
 
-@OkxComponent
+@Component
+@Profile(Constants.EXChANGE_OKX)
 public class OkxRestTemplate implements ApplicationContextAware {
 
     private static final Logger logger = LoggerFactory.getLogger(OkxRestTemplate.class);

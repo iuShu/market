@@ -4,8 +4,8 @@ import java.lang.reflect.Method;
 
 public class Subscriber {
 
-    private Object subscriber;
-    private Method handleMethod;
+    private final Object subscriber;
+    private final Method handleMethod;
 
     public Subscriber(Object subscriber, Method handleMethod) {
         this.subscriber = subscriber;

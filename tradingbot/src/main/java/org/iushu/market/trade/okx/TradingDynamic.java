@@ -1,23 +1,26 @@
-package org.iushu.market.trade.okx.core;
+package org.iushu.market.trade.okx;
 
 import com.alibaba.fastjson2.JSONObject;
+import org.iushu.market.Constants;
 import org.iushu.market.component.notify.Notifier;
 import org.iushu.market.trade.PosSide;
-import org.iushu.market.trade.okx.DispatchManager;
 import org.iushu.market.trade.okx.config.OkxComponent;
 import org.iushu.market.trade.okx.event.OrderClosedEvent;
 import org.iushu.market.trade.okx.event.OrderErrorEvent;
 import org.iushu.market.trade.okx.event.OrderFilledEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Profile;
 import org.springframework.context.event.EventListener;
+import org.springframework.stereotype.Component;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 
-@OkxComponent
+@Component
+@Profile(Constants.EXChANGE_OKX)
 public class TradingDynamic {
 
     private static final Logger logger = LoggerFactory.getLogger(TradingDynamic.class);
@@ -61,7 +64,7 @@ public class TradingDynamic {
     @EventListener(OrderErrorEvent.class)
     public void notifyOrderError(OrderErrorEvent event) {
         Object source = event.getSource();
-        String template = "#### **Order Error**\n----\n%s\n----\n" + currentTime();
+        String template = "#### **Order Error**\n----\n\n%s\n\n----\n" + currentTime();
         notifier.notify("Order Error", String.format(template, source.toString()));
         manager.close();
     }

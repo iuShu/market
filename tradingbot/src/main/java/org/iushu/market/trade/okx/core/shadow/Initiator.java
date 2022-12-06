@@ -1,14 +1,18 @@
-package org.iushu.market.trade.okx.core;
+package org.iushu.market.trade.okx.core.shadow;
 
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
+import org.iushu.market.Constants;
 import org.iushu.market.config.TradingProperties;
 import org.iushu.market.trade.PosSide;
-import org.iushu.market.trade.okx.*;
-import org.iushu.market.trade.okx.config.OkxComponent;
+import org.iushu.market.trade.okx.OkxRestTemplate;
+import org.iushu.market.trade.okx.OkxWebSocketSession;
+import org.iushu.market.trade.okx.Strategy;
+import org.iushu.market.trade.okx.config.OkxShadowComponent;
 import org.iushu.market.trade.okx.config.SubscribeChannel;
 import org.iushu.market.trade.okx.event.OrderClosedEvent;
 import org.iushu.market.trade.okx.event.OrderErrorEvent;
+import org.iushu.market.trade.okx.event.OrderFilledEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
@@ -23,12 +27,11 @@ import java.util.Date;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.iushu.market.Constants.ORDER_TYPE_MARKET;
 import static org.iushu.market.trade.MartinOrderUtils.lastContractSize;
 import static org.iushu.market.trade.MartinOrderUtils.totalCost;
-import static org.iushu.market.trade.okx.OkxConstants.*;
+import static org.iushu.market.trade.okx.OkxConstants.CHANNEL_TICKERS;
 
-@OkxComponent
+@OkxShadowComponent("shadowInitiator")
 public class Initiator implements ApplicationContextAware {
 
     private static final Logger logger = LoggerFactory.getLogger(Initiator.class);
@@ -40,9 +43,7 @@ public class Initiator implements ApplicationContextAware {
 
     private final Strategy<Double> strategy;
     private volatile double balance = 0.0;
-    private volatile String messageId = "";
     private final AtomicBoolean existed = new AtomicBoolean(false);
-    private final AtomicInteger failure = new AtomicInteger(5);
     private final AtomicInteger batch = new AtomicInteger(1);
 
     public Initiator(Strategy<Double> strategy, OkxRestTemplate restTemplate, TradingProperties properties, TaskScheduler taskScheduler) {
@@ -95,55 +96,26 @@ public class Initiator implements ApplicationContextAware {
             return;
         }
 
-        logger.debug("recommend {}", posSide.getName());
-        JSONObject packet = PacketUtils.placeOrderPacket(properties, posSide.openSide(), posSide, ORDER_TYPE_MARKET,
-                properties.getOrder().getFirstContractSize(), 0.0);
-
         if (existed.get() || !existed.compareAndSet(false, true))
             return;
 
-        if (session.sendPrivateMessage(packet)) {
-            logger.info("sent first order {} {}", price, properties.getOrder().getFirstContractSize());
-            messageId = packet.getString("id");
-        }
-        else {
-            String errMsg = "send first order failed";
-            logger.warn(errMsg);
-//            eventPublisher.publishEvent(new OrderErrorEvent(errMsg));
-        }
-    }
+        logger.info("sent first order {} {}", price, properties.getOrder().getFirstContractSize());
+        logger.info("placed first order at {}", price);
 
-    @SubscribeChannel(op = OP_ORDER)
-    public void placeResponse(JSONObject message) {
-        String mid = message.getString("id");
-        if (!messageId.equals(mid))
-            return;
-
-        int code = message.getIntValue("code", -1);
-        if (SUCCESS == code) {
-            messageId = "";
-            failure.set(5);
-            logger.info("placed first order {} success", mid);
-            return;
-        }
-
-        if (failure.getAndDecrement() == 0) {
-            logger.error("place first order failed too many times");
-            eventPublisher.publishEvent(new OrderErrorEvent("place first order failed too many times"));
-            return;
-        }
-        logger.error("place first order failed {}", message.toString());
-        existed.compareAndSet(true, false);     // recover
-//        eventPublisher.publishEvent(new OrderErrorEvent(message));
+        JSONObject filled = JSONObject.of("sz", properties.getOrder().getFirstContractSize());
+        filled.put("avgPx", price);
+        filled.put("posSide", posSide);
+        filled.put("accFillSz", properties.getOrder().getFirstContractSize());
+        filled.put("state", Constants.ORDER_STATE_FILLED);
+        filled.put("side", posSide.openSide());
+        eventPublisher.publishEvent(new OrderFilledEvent(filled));
     }
 
     @EventListener(OrderClosedEvent.class)
     public void onOrderClose(OrderClosedEvent event) {
         taskScheduler.schedule(() -> existed.compareAndSet(true, false), new Date(System.currentTimeMillis() + 5000));
         refreshAccountBalance();
-        JSONObject data = (JSONObject) event.getSource();
-        String pnl = data.getString("pnl");
-        logger.info("{} batch order closed, balance {} {}, ready to next round", batch.getAndIncrement(), balance, pnl);
+        logger.info("{} batch order closed, balance {}, ready to next round", batch.getAndIncrement(), balance);
     }
 
     private void refreshAccountBalance() {

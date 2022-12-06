@@ -37,6 +37,7 @@ public interface Constants {
     String ORDER_STATE_LIVE = "live";
     String ORDER_STATE_FILLED = "filled";
     String ORDER_STATE_CANCELED = "canceled";
+    String ORDER_STATE_PARTIALLY_FILLED = "partially_filled";
 
     String ALGO_TYPE_CONDITIONAL = "conditional";
     String ALGO_TYPE_OCO = "oco";

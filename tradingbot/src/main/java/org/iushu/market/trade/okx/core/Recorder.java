@@ -23,6 +23,7 @@ public class Recorder {
         STATE_DESC.put(ORDER_STATE_LIVE, "placed");
         STATE_DESC.put(ORDER_STATE_FILLED, "filled");
         STATE_DESC.put(ORDER_STATE_CANCELED, "canceled");
+        STATE_DESC.put(ORDER_STATE_PARTIALLY_FILLED, "partial filled");
     }
 
     @SubscribeChannel(channel = CHANNEL_ORDERS)

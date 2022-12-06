@@ -5,7 +5,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.task.AsyncListenableTaskExecutor;
 import org.springframework.scheduling.TaskScheduler;
-import org.springframework.util.Assert;
 import org.springframework.util.concurrent.ListenableFuture;
 import org.springframework.web.socket.PingMessage;
 import org.springframework.web.socket.WebSocketHandler;
@@ -47,6 +46,7 @@ public class TradingWebSocketClient extends StandardWebSocketClient {
                 scheduleHeartbeat();
             } catch (Exception e) {
                 logger.error("after connected task error", e);
+                channelWebSocketHandler.reconnect();
             }
         };
         AsyncListenableTaskExecutor taskExecutor = getTaskExecutor();

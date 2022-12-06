@@ -2,17 +2,21 @@ package org.iushu.market.trade.okx;
 
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
+import org.iushu.market.Constants;
 import org.iushu.market.client.ChannelWebSocketHandler;
 import org.iushu.market.client.event.ChannelClosedEvent;
 import org.iushu.market.client.event.ChannelMessagingEvent;
 import org.iushu.market.client.event.ChannelOpenedEvent;
 import org.iushu.market.config.TradingProperties;
 import org.iushu.market.trade.okx.config.OkxComponent;
+import org.iushu.market.trade.okx.config.OkxShadowComponent;
 import org.iushu.market.trade.okx.config.SubscribeChannel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.context.annotation.Profile;
+import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.ResourcePatternResolver;
@@ -23,9 +27,11 @@ import org.springframework.core.type.classreading.CachingMetadataReaderFactory;
 import org.springframework.core.type.classreading.MetadataReader;
 import org.springframework.core.type.classreading.MetadataReaderFactory;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.adapter.standard.StandardWebSocketSession;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
@@ -33,7 +39,8 @@ import java.util.stream.Collectors;
 
 import static org.iushu.market.trade.okx.OkxConstants.*;
 
-@OkxComponent
+@Component
+@Profile(Constants.EXChANGE_OKX)
 public class DispatchManager {
 
     private static final Logger logger = LoggerFactory.getLogger(DispatchManager.class);
@@ -44,6 +51,7 @@ public class DispatchManager {
     private final Map<String, List<Subscriber>> events = new HashMap<>();
     private final Map<String, List<Subscriber>> channels = new HashMap<>();
 
+    private Class annotatedClass = null;
     private final OkxWebSocketSession session = new OkxWebSocketSession();
     private ConfigurableApplicationContext applicationContext;
     private final CountDownLatch latch = new CountDownLatch(2);
@@ -194,10 +202,18 @@ public class DispatchManager {
         return subscribingChannels.isEmpty() ? JSONObject.of() : PacketUtils.subscribePacket(subscribingChannels);
     }
 
-    @EventListener(ApplicationReadyEvent.class)
-    public void scanSubscriber(ApplicationReadyEvent readyEvent) {
+    @EventListener(ContextRefreshedEvent.class)
+    public void scanSubscriber(ContextRefreshedEvent refreshedEvent) {
         try {
-            this.applicationContext = readyEvent.getApplicationContext();
+            this.applicationContext = (ConfigurableApplicationContext) refreshedEvent.getApplicationContext();
+            for (String activeProfile : this.applicationContext.getEnvironment().getActiveProfiles()) {
+                if (activeProfile.equals("shadow")) {
+                    annotatedClass = OkxShadowComponent.class;
+                    break;
+                }
+            }
+            annotatedClass = annotatedClass == null ? OkxComponent.class : annotatedClass;
+
             ResourcePatternResolver resolver = ResourcePatternUtils.getResourcePatternResolver(applicationContext);
             MetadataReaderFactory factory = new CachingMetadataReaderFactory(resolver);
             Resource[] resources = resolver.getResources("classpath:**/*.class");
@@ -206,7 +222,8 @@ public class DispatchManager {
                 MetadataReader reader = factory.getMetadataReader(resource);
                 AnnotationMetadata metadata = reader.getAnnotationMetadata();
                 Set<MethodMetadata> annotatedMethods = metadata.getAnnotatedMethods(annotationName);
-                if (!metadata.getAnnotations().isPresent(OkxComponent.class) || annotatedMethods.isEmpty())
+                if (!reader.getAnnotationMetadata().getClassName().equals(DispatchManager.class.getName())
+                    && (!metadata.getAnnotations().isPresent(annotatedClass) || annotatedMethods.isEmpty()))
                     continue;
 
                 Class<?> beanClass = Class.forName(metadata.getClassName());

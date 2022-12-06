@@ -43,7 +43,7 @@ public class ChannelWebSocketHandler implements WebSocketHandler, ApplicationCon
     }
 
     @Override
-    public void handleMessage(WebSocketSession session, WebSocketMessage<?> message) throws Exception {
+    public void handleMessage(WebSocketSession session, WebSocketMessage<?> message) {
         logger.debug("{}", message.getPayload().toString());
         if (message instanceof TextMessage) {
             JSONObject payload = JSONObject.parseObject(message.getPayload().toString());
@@ -62,25 +62,28 @@ public class ChannelWebSocketHandler implements WebSocketHandler, ApplicationCon
     }
 
     @Override
-    public void handleTransportError(WebSocketSession session, Throwable exception) throws Exception {
+    public void handleTransportError(WebSocketSession session, Throwable exception) {
         logger.warn("transport error", exception);
         this.eventPublisher.publishEvent(new ChannelErrorEvent<>(session, exception));
     }
 
     @Override
-    public void afterConnectionClosed(WebSocketSession session, CloseStatus closeStatus) throws Exception {
+    public void afterConnectionClosed(WebSocketSession session, CloseStatus closeStatus) {
         logger.warn("connection closed due to {} {}", closeStatus.getCode(), closeStatus.getReason());
-        if (INITIATE_CLOSE.equalsCode(closeStatus))
-            return;
-        if (reconnectTimes >= properties.getReconnectTime()) {
-            logger.warn("client reached max reconnect times, over");
-            this.eventPublisher.publishEvent(new ChannelClosedEvent<>(session, closeStatus));
-            return;
-        }
+        if (!INITIATE_CLOSE.equalsCode(closeStatus))
+            reconnect();
+    }
 
-        logger.info("client disconnected, {} try reconnecting", reconnectTimes);
-        client.doHandshake(this, websocketUrl);
-        reconnectTimes++;
+    public void reconnect() {
+        if (reconnectTimes < properties.getReconnectTime()) {
+            logger.info("client disconnected, {} try reconnecting", reconnectTimes);
+            client.doHandshake(this, websocketUrl);
+            reconnectTimes++;
+        }
+        else {
+            logger.warn("client reached max reconnect times, over");
+            this.eventPublisher.publishEvent(new ChannelClosedEvent<>(session, null));
+        }
     }
 
     @Override
