@@ -1,5 +1,6 @@
 package org.iushu.market.config;
 
+import com.ulisesbocchio.jasyptspringboot.annotation.EnableEncryptableProperties;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.conn.ssl.NoopHostnameVerifier;
@@ -33,6 +34,7 @@ import static org.springframework.context.support.AbstractApplicationContext.APP
 @EnableAsync
 @EnableWebSocket
 @EnableScheduling
+@EnableEncryptableProperties
 @Configuration
 public class ApplicationConfig {
 
