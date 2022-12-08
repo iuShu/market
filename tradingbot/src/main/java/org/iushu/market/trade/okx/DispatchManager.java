@@ -215,7 +215,7 @@ public class DispatchManager {
 
             ResourcePatternResolver resolver = ResourcePatternUtils.getResourcePatternResolver(applicationContext);
             MetadataReaderFactory factory = new CachingMetadataReaderFactory(resolver);
-            Resource[] resources = resolver.getResources("classpath:**/*.class");
+            Resource[] resources = resolver.getResources("classpath*:org/iushu/market/trade/**/*.class");
             String annotationName = SubscribeChannel.class.getCanonicalName();
             for (Resource resource : resources) {
                 MetadataReader reader = factory.getMetadataReader(resource);
