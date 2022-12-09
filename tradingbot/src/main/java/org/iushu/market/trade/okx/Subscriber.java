@@ -22,6 +22,6 @@ public class Subscriber {
 
     @Override
     public String toString() {
-        return String.format("subscriber=%s, method=%s", subscriber.getClass().getName(), handleMethod.getName());
+        return String.format("subscriber=%s#%s", subscriber.getClass().getName(), handleMethod.getName());
     }
 }

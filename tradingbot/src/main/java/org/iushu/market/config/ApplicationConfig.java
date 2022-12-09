@@ -45,7 +45,7 @@ public class ApplicationConfig {
 
     @Bean
     @Profile({"test", Constants.EXChANGE_OKX})
-    public RestTemplate testRestTemplate(RestTemplateBuilder builder, TradingProperties.ApiInfo apiInfo) {
+    public RestTemplate testRestTemplate(RestTemplateBuilder builder) {
         try {
             RequestConfig requestConfig = RequestConfig.custom().setConnectTimeout(10000)
                     .setConnectionRequestTimeout(7000).setSocketTimeout(10000).build();
