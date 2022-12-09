@@ -9,11 +9,13 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.ssl.SSLContexts;
 import org.iushu.market.Constants;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.boot.task.TaskExecutorBuilder;
 import org.springframework.boot.task.TaskSchedulerBuilder;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.context.annotation.Profile;
 import org.springframework.context.event.EventListener;
 import org.springframework.context.event.SimpleApplicationEventMulticaster;
@@ -28,7 +30,6 @@ import org.springframework.web.socket.config.annotation.EnableWebSocket;
 
 import javax.net.ssl.SSLContext;
 
-import static org.springframework.boot.autoconfigure.task.TaskExecutionAutoConfiguration.APPLICATION_TASK_EXECUTOR_BEAN_NAME;
 import static org.springframework.context.support.AbstractApplicationContext.APPLICATION_EVENT_MULTICASTER_BEAN_NAME;
 
 @EnableAsync
@@ -37,6 +38,12 @@ import static org.springframework.context.support.AbstractApplicationContext.APP
 @EnableEncryptableProperties
 @Configuration
 public class ApplicationConfig {
+
+    @Bean
+    @Primary
+    public TaskExecutor taskExecutor(TaskExecutorBuilder builder) {
+        return builder.corePoolSize(Runtime.getRuntime().availableProcessors() + 1).build();
+    }
 
     @Bean
     public TaskScheduler taskScheduler(TaskSchedulerBuilder builder) {
@@ -65,7 +72,7 @@ public class ApplicationConfig {
     public void onReady(ApplicationReadyEvent event) {
         ConfigurableApplicationContext context = event.getApplicationContext();
         SimpleApplicationEventMulticaster multicaster = context.getBean(APPLICATION_EVENT_MULTICASTER_BEAN_NAME, SimpleApplicationEventMulticaster.class);
-        TaskExecutor executor = context.getBean(APPLICATION_TASK_EXECUTOR_BEAN_NAME, TaskExecutor.class);
+        TaskExecutor executor = context.getBean(TaskExecutor.class);
         multicaster.setTaskExecutor(executor);
     }
 

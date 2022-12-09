@@ -241,9 +241,9 @@ public class DispatchManager {
                     });
                 });
             }
-//            operations.forEach((k, v) -> System.out.println(k + " " + v));
-//            events.forEach((k, v) -> System.out.println(k + " " + v));
-//            channels.forEach((k, v) -> System.out.println(k + " " + v));
+            operations.forEach((k, v) -> logger.info("{} {}", k, v));
+            events.forEach((k, v) -> logger.info("{} {}", k, v));
+            channels.forEach((k, v) -> logger.info("{} {}", k, v));
         } catch (Exception e) {
             logger.error("load subscribing method error", e);
             System.exit(1);
