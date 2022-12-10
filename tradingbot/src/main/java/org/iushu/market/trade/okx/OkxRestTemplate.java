@@ -113,7 +113,7 @@ public class OkxRestTemplate implements ApplicationContextAware {
             return 0.0;
         JSONArray data = response.getJSONArray("data");
         JSONArray details = data.getJSONObject(0).getJSONArray("details");
-        return details.getJSONObject(0).getDoubleValue("availEq");
+        return details.isEmpty() ? 0.0 : details.getJSONObject(0).getDoubleValue("availEq");
     }
 
     public JSONArray getLeverage() {

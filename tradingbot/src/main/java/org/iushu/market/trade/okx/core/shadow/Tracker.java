@@ -43,6 +43,9 @@ public class Tracker implements ApplicationContextAware {
 
     @SubscribeChannel(channel = CHANNEL_TICKERS)
     public void fillOrCloseOrder(JSONObject message) {
+        if (posSide == null || firstPx == 0)
+            return;
+
         JSONArray data = message.getJSONArray("data");
         JSONObject ticker = data.getJSONObject(0);
         double price = ticker.getDoubleValue("last");

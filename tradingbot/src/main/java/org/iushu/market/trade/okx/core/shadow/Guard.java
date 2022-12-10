@@ -3,7 +3,9 @@ package org.iushu.market.trade.okx.core.shadow;
 import com.alibaba.fastjson2.JSONObject;
 import org.iushu.market.config.TradingProperties;
 import org.iushu.market.trade.PosSide;
+import org.iushu.market.trade.okx.OkxConstants;
 import org.iushu.market.trade.okx.config.OkxShadowComponent;
+import org.iushu.market.trade.okx.config.SubscribeChannel;
 import org.iushu.market.trade.okx.event.OrderClosedEvent;
 import org.iushu.market.trade.okx.event.OrderFilledEvent;
 import org.slf4j.Logger;
@@ -43,6 +45,11 @@ public class Guard {
     @EventListener(OrderClosedEvent.class)
     public void onOrderClosed() {
         firstPx = 0.0;
+    }
+
+    @SubscribeChannel(channel = OkxConstants.CHANNEL_ORDERS)
+    public void dummy() {
+
     }
 
 }

@@ -89,12 +89,7 @@ public class Initiator implements ApplicationContextAware {
             return;
 
         double cost = totalCost(price, lastContractSize(properties.getOrder()), posSide, properties.getLever(), properties.getOrder());
-        if (balance < cost) {
-            String errMsg = String.format("account balance not enough for cost %s", cost);
-            logger.error(errMsg);
-            eventPublisher.publishEvent(new OrderErrorEvent(errMsg));
-            return;
-        }
+        logger.info("{} cost {} at {}", batch.get(), cost, price);
 
         if (existed.get() || !existed.compareAndSet(false, true))
             return;
@@ -104,7 +99,7 @@ public class Initiator implements ApplicationContextAware {
 
         JSONObject filled = JSONObject.of("sz", properties.getOrder().getFirstContractSize());
         filled.put("avgPx", price);
-        filled.put("posSide", posSide);
+        filled.put("posSide", posSide.getName());
         filled.put("accFillSz", properties.getOrder().getFirstContractSize());
         filled.put("state", Constants.ORDER_STATE_FILLED);
         filled.put("side", posSide.openSide());
@@ -119,10 +114,7 @@ public class Initiator implements ApplicationContextAware {
     }
 
     private void refreshAccountBalance() {
-        double balance = restTemplate.getBalance();
-        if (balance <= 0)
-            throw new IllegalStateException("deficient balance for trading");
-        this.balance = balance;
+        this.balance = restTemplate.getBalance();
     }
 
     @Override
