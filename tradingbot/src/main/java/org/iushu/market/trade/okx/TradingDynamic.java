@@ -69,8 +69,7 @@ public class TradingDynamic {
         manager.close();
     }
 
-    @EventListener(ChannelClosedEvent.class)
-    public void channelError() {
+    public void notifyChannelError() {
         String template = "#### **System Exit**\n----\n\nwebsocket disconnected\n\n----\n" + currentTime();
         notifier.notify("System Exit", template);
     }

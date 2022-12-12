@@ -13,7 +13,6 @@ import org.iushu.market.trade.okx.config.OkxShadowComponent;
 import org.iushu.market.trade.okx.config.SubscribeChannel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Profile;
 import org.springframework.context.event.ContextRefreshedEvent;
@@ -46,6 +45,7 @@ public class DispatchManager {
 
     private final TradingProperties properties;
     private final TradingProperties.ApiInfo apiInfo;
+    private final TradingDynamic tradingDynamic;
     private final Map<String, List<Subscriber>> operations = new HashMap<>();
     private final Map<String, List<Subscriber>> events = new HashMap<>();
     private final Map<String, List<Subscriber>> channels = new HashMap<>();
@@ -55,9 +55,10 @@ public class DispatchManager {
     private ConfigurableApplicationContext applicationContext;
     private final CountDownLatch latch = new CountDownLatch(2);
 
-    public DispatchManager(TradingProperties properties, TradingProperties.ApiInfo apiInfo) {
+    public DispatchManager(TradingProperties properties, TradingProperties.ApiInfo apiInfo, TradingDynamic tradingDynamic) {
         this.properties = properties;
         this.apiInfo = apiInfo;
+        this.tradingDynamic = tradingDynamic;
     }
 
     @Async
@@ -108,6 +109,7 @@ public class DispatchManager {
     @Async
     @EventListener(ChannelClosedEvent.class)
     public void channelClosed() {
+        tradingDynamic.notifyChannelError();
         this.close();
     }
 
