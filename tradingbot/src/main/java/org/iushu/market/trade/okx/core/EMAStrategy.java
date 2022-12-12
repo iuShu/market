@@ -84,9 +84,9 @@ public class EMAStrategy implements Strategy<Double> {
             logger.debug("accept candle data {} {}", repository.size(), this.current);
             return;
         }
-        else if (timestamp != 0 && ts != timestamp) {
-            logger.warn("current {} but recv {}", timestamp, ts);
-        }
+//        else if (timestamp != 0 && ts != timestamp) {
+//            logger.warn("current {} but recv {}", timestamp, ts);
+//        }
         else if (timestamp == 0 && !repository.isEmpty()) {
             JSONArray last = repository.get(repository.size() - 1);
             Long lastTs = last.getLong(0);

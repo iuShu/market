@@ -51,28 +51,11 @@ public class Tracker implements ApplicationContextAware {
         double price = ticker.getDoubleValue("last");
         int cs = contractSize(idx.get(), properties.getOrder());
         double nextOrderPrice = nextOrderPrice(firstPx, cs, posSide, properties.getOrder());
-        if (!posSide.isLoss(nextOrderPrice, price) || !processing.compareAndSet(false, true))
-            return;
-
-        if (nextOrderPrice == stopLossPrice(firstPx, posSide, properties.getOrder())) {
-            firstPx = 0.0;
-            posSide = null;
-            idx.set(0);
-            eventPublisher.publishEvent(new OrderClosedEvent("order failed at " + price));
-            logger.warn("order failed this round at {}", price);
-        }
-        else {
-            idx.incrementAndGet();
-            cs = nextContractSize(cs, properties.getOrder());
-            JSONObject filled = JSONObject.of("sz", cs);
-            filled.put("avgPx", nextOrderPrice);
-            filled.put("posSide", posSide);
-            filled.put("accFillSz", cs);
-            filled.put("state", Constants.ORDER_STATE_FILLED);
-            filled.put("side", posSide.openSide());
-            eventPublisher.publishEvent(new OrderFilledEvent(filled));
-        }
-        processing.compareAndSet(true, false);
+        double takeProfitPrice = takeProfitPrice(firstPx, cs, posSide, properties.getOrder());
+        if (posSide.isLoss(nextOrderPrice, price))
+            fillNextOrStopLoss(nextOrderPrice, price, cs);
+        if (posSide.isProfit(takeProfitPrice, price))
+            takeProfit(price);
     }
 
     @EventListener(OrderFilledEvent.class)
@@ -91,6 +74,52 @@ public class Tracker implements ApplicationContextAware {
         this.posSide = posSide;
         placeFollowOrders(posSide);
         addMarginBalance();
+    }
+
+    private void fillNextOrStopLoss(double nextOrderPrice, double price, int orderContractSize) {
+        if (!processing.compareAndSet(false, true))
+            return;
+        try {
+            if (nextOrderPrice == stopLossPrice(firstPx, posSide, properties.getOrder())) {
+                firstPx = 0.0;
+                posSide = null;
+                idx.set(0);
+                eventPublisher.publishEvent(new OrderClosedEvent(price));
+                logger.warn("order failed this round at {}", price);
+            } else {
+                idx.incrementAndGet();
+                orderContractSize = nextContractSize(orderContractSize, properties.getOrder());
+                JSONObject filled = JSONObject.of("sz", orderContractSize);
+                filled.put("avgPx", nextOrderPrice);
+                filled.put("posSide", posSide);
+                filled.put("accFillSz", orderContractSize);
+                filled.put("state", Constants.ORDER_STATE_FILLED);
+                filled.put("side", posSide.openSide());
+                eventPublisher.publishEvent(new OrderFilledEvent(filled));
+            }
+        } catch (Exception e) {
+            logger.error("fill next or stop loss process error", e);
+        } finally {
+            processing.compareAndSet(true, false);
+        }
+    }
+
+    private void takeProfit(double price) {
+        if (!processing.compareAndSet(false, true))
+            return;
+        try {
+            posSide = null;
+            firstPx = 0.0;
+            idx.set(0);
+            logger.info("cancel algo orders");
+            logger.info("close all follow orders");
+            eventPublisher.publishEvent(new OrderClosedEvent(null));
+            logger.info("close by take profit at {}", price);
+        } catch (Exception e) {
+            logger.error("take profit process error", e);
+        } finally {
+            processing.compareAndSet(true, false);
+        }
     }
 
     private void placeFollowOrders(PosSide posSide) {
