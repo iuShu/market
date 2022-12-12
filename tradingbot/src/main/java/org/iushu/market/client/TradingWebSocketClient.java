@@ -104,7 +104,9 @@ public class TradingWebSocketClient extends StandardWebSocketClient {
             if (!isActive())
                 return;
 
-            session.sendMessage(new PingMessage(ByteBuffer.wrap("ping".getBytes(UTF_8))));
+            synchronized (session) {
+                session.sendMessage(new PingMessage(ByteBuffer.wrap("ping".getBytes(UTF_8))));
+            }
             scheduleHeartbeat();
         } catch (IOException e) {
             logger.error("send heartbeat error", e);

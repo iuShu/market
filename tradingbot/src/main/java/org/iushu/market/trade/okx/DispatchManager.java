@@ -70,10 +70,12 @@ public class DispatchManager {
         if (apiInfo.getWsPrivateUrl().equals(handler.getWebsocketUrl())) {
             this.session.setPrivateSession(session);
             packet = PacketUtils.loginPacket(apiInfo.getApiKey(), apiInfo.getSecret(), apiInfo.getPassphrase());
-            this.session.sendPrivateMessage(packet);
+            boolean r = this.session.sendPrivateMessage(packet);
+            logger.info("ws-private {} login packet", r ? "sent" : "failed send");
         }
         else {
             this.session.setPublicSession(session);
+            logger.info("ws-public waiting");
             waitOther();
             packet = subscribeChannelPacket(false);
             this.session.sendPublicMessage(packet);

@@ -17,7 +17,7 @@ public class TradingProperties {
     private String instType;
     private String tdMode;
     private int lever;
-    private long heartbeatPeriod = 20000;   // millisecond
+    private long heartbeatPeriod = 10000;   // millisecond
 
     private final TradingProperties.Notify notify = new TradingProperties.Notify();
     private final TradingProperties.Okx okx = new TradingProperties.Okx();

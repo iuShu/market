@@ -40,8 +40,6 @@ public class Guard implements ApplicationContextAware {
     @SubscribeChannel(channel = CHANNEL_ORDERS)
     public void onOrderFilled(JSONObject message) {
         JSONObject data = message.getJSONArray("data").getJSONObject(0);
-        logger.info("filled data {}", data);    // dev
-
         int contractSize = data.getIntValue("sz", -1);
         double accFillSz = data.getDoubleValue("accFillSz");
         String side = data.getString("side");
@@ -50,6 +48,7 @@ public class Guard implements ApplicationContextAware {
         if (!state.equals(ORDER_STATE_FILLED) || !side.equals(posSide.openSide()))
             return;
 
+        logger.info("filled data {}", data);    // dev
         if (accFillSz < contractSize)           // filter partial filled
             return;
 

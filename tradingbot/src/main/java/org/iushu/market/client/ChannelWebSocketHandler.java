@@ -17,7 +17,7 @@ import org.springframework.scheduling.TaskScheduler;
 import org.springframework.web.socket.*;
 import org.springframework.web.socket.client.WebSocketClient;
 
-import java.time.Duration;
+import java.util.Date;
 
 public class ChannelWebSocketHandler implements WebSocketHandler, ApplicationContextAware {
 
@@ -43,7 +43,8 @@ public class ChannelWebSocketHandler implements WebSocketHandler, ApplicationCon
         logger.info("connect established {}", websocketUrl);
         reconnectTimes = 0;
         this.session = session;
-        this.eventPublisher.publishEvent(new ChannelOpenedEvent<>(this, session));
+        Date time = new Date(System.currentTimeMillis() + 3000);
+        taskScheduler.schedule(() -> this.eventPublisher.publishEvent(new ChannelOpenedEvent<>(this, session)), time);
     }
 
     @Override
@@ -80,11 +81,12 @@ public class ChannelWebSocketHandler implements WebSocketHandler, ApplicationCon
 
     public void reconnect() {
         if (reconnectTimes < properties.getReconnectTime()) {
-            logger.info("client disconnected, {} try reconnecting", reconnectTimes);
-            taskScheduler.scheduleAtFixedRate(() -> {
+            logger.info("client disconnected to {}", websocketUrl);
+            taskScheduler.schedule(() -> {
+                logger.info("{} try reconnect to {}", reconnectTimes, websocketUrl);
                 client.doHandshake(this, websocketUrl);
                 reconnectTimes++;
-            }, Duration.ofMillis(2000));
+            }, new Date(System.currentTimeMillis() + 2000));
         }
         else {
             logger.warn("client reached max reconnect times, over");
@@ -95,10 +97,6 @@ public class ChannelWebSocketHandler implements WebSocketHandler, ApplicationCon
     @Override
     public boolean supportsPartialMessages() {
         return false;
-    }
-
-    protected boolean isActive() {
-        return session != null && session.isOpen();
     }
 
     public void setClient(WebSocketClient client) {

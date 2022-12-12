@@ -19,7 +19,6 @@ public class OkxWebSocketSession {
 
     private volatile WebSocketSession publicSession;
     private volatile WebSocketSession privateSession;
-    private final Lock lock = new ReentrantLock();
 
     public WebSocketSession getPublicSession() {
         return publicSession;
@@ -53,15 +52,14 @@ public class OkxWebSocketSession {
             return false;
         }
 
-        lock.lock();
         try {
-            session.sendMessage(new TextMessage(message.toJSONString()));
+            synchronized (session) {
+                session.sendMessage(new TextMessage(message.toJSONString()));
+            }
             return true;
         } catch (Exception e) {
             logger.error("send message error {}", message.toJSONString(), e);
             return false;
-        } finally {
-            lock.unlock();
         }
     }
 
