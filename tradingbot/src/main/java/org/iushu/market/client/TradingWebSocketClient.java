@@ -38,6 +38,7 @@ public class TradingWebSocketClient extends StandardWebSocketClient {
     public ListenableFuture<WebSocketSession> doHandshake(WebSocketHandler webSocketHandler, String uriTemplate, Object... uriVars) {
         ChannelWebSocketHandler channelWebSocketHandler = (ChannelWebSocketHandler) webSocketHandler;
         channelWebSocketHandler.setClient(this);
+        channelWebSocketHandler.setTaskScheduler(taskScheduler);
         channelWebSocketHandler.setWebsocketUrl(uriTemplate);
         ListenableFuture<WebSocketSession> doHandshake = super.doHandshake(webSocketHandler, uriTemplate, uriVars);
         Runnable afterConnected = () -> {

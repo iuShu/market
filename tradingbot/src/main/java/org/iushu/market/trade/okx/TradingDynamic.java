@@ -2,9 +2,9 @@ package org.iushu.market.trade.okx;
 
 import com.alibaba.fastjson2.JSONObject;
 import org.iushu.market.Constants;
+import org.iushu.market.client.event.ChannelClosedEvent;
 import org.iushu.market.component.notify.Notifier;
 import org.iushu.market.trade.PosSide;
-import org.iushu.market.trade.okx.config.OkxComponent;
 import org.iushu.market.trade.okx.event.OrderClosedEvent;
 import org.iushu.market.trade.okx.event.OrderErrorEvent;
 import org.iushu.market.trade.okx.event.OrderFilledEvent;
@@ -67,6 +67,12 @@ public class TradingDynamic {
         String template = "#### **Order Error**\n----\n\n%s\n\n----\n" + currentTime();
         notifier.notify("Order Error", String.format(template, source.toString()));
         manager.close();
+    }
+
+    @EventListener(ChannelClosedEvent.class)
+    public void channelError() {
+        String template = "#### **System Exit**\n----\n\nwebsocket disconnected\n\n----\n" + currentTime();
+        notifier.notify("System Exit", template);
     }
 
     public static String currentTime() {

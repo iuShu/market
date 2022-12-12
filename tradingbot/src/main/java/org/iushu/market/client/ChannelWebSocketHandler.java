@@ -13,8 +13,11 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.core.task.TaskRejectedException;
+import org.springframework.scheduling.TaskScheduler;
 import org.springframework.web.socket.*;
 import org.springframework.web.socket.client.WebSocketClient;
+
+import java.time.Duration;
 
 public class ChannelWebSocketHandler implements WebSocketHandler, ApplicationContextAware {
 
@@ -23,6 +26,7 @@ public class ChannelWebSocketHandler implements WebSocketHandler, ApplicationCon
     public static final CloseStatus INITIATE_CLOSE = new CloseStatus(4444);
 
     protected WebSocketProperties properties;
+    protected TaskScheduler taskScheduler;
     protected WebSocketClient client;
     protected WebSocketSession session;
     protected String websocketUrl;
@@ -77,8 +81,10 @@ public class ChannelWebSocketHandler implements WebSocketHandler, ApplicationCon
     public void reconnect() {
         if (reconnectTimes < properties.getReconnectTime()) {
             logger.info("client disconnected, {} try reconnecting", reconnectTimes);
-            client.doHandshake(this, websocketUrl);
-            reconnectTimes++;
+            taskScheduler.scheduleAtFixedRate(() -> {
+                client.doHandshake(this, websocketUrl);
+                reconnectTimes++;
+            }, Duration.ofMillis(2000));
         }
         else {
             logger.warn("client reached max reconnect times, over");
@@ -97,6 +103,10 @@ public class ChannelWebSocketHandler implements WebSocketHandler, ApplicationCon
 
     public void setClient(WebSocketClient client) {
         this.client = client;
+    }
+
+    public void setTaskScheduler(TaskScheduler taskScheduler) {
+        this.taskScheduler = taskScheduler;
     }
 
     public void setWebsocketUrl(String websocketUrl) {
