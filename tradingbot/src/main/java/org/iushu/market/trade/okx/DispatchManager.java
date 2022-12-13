@@ -4,7 +4,6 @@ import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import org.iushu.market.Constants;
 import org.iushu.market.client.ChannelWebSocketHandler;
-import org.iushu.market.client.event.ChannelClosedEvent;
 import org.iushu.market.client.event.ChannelMessagingEvent;
 import org.iushu.market.client.event.ChannelOpenedEvent;
 import org.iushu.market.config.TradingProperties;
@@ -45,7 +44,6 @@ public class DispatchManager {
 
     private final TradingProperties properties;
     private final TradingProperties.ApiInfo apiInfo;
-    private final TradingDynamic tradingDynamic;
     private final Map<String, List<Subscriber>> operations = new HashMap<>();
     private final Map<String, List<Subscriber>> events = new HashMap<>();
     private final Map<String, List<Subscriber>> channels = new HashMap<>();
@@ -55,10 +53,9 @@ public class DispatchManager {
     private ConfigurableApplicationContext applicationContext;
     private final CountDownLatch latch = new CountDownLatch(2);
 
-    public DispatchManager(TradingProperties properties, TradingProperties.ApiInfo apiInfo, TradingDynamic tradingDynamic) {
+    public DispatchManager(TradingProperties properties, TradingProperties.ApiInfo apiInfo) {
         this.properties = properties;
         this.apiInfo = apiInfo;
-        this.tradingDynamic = tradingDynamic;
     }
 
     @Async
@@ -104,13 +101,6 @@ public class DispatchManager {
         dispatchOperation(session, message);
         dispatchEvent(session, message);
         dispatchChannel(session, message);
-    }
-
-    @Async
-    @EventListener(ChannelClosedEvent.class)
-    public void channelClosed() {
-        tradingDynamic.notifyChannelError();
-        this.close();
     }
 
     private void dispatchOperation(OkxWebSocketSession session, JSONObject message) {

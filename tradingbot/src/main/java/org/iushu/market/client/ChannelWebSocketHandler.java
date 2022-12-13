@@ -1,7 +1,6 @@
 package org.iushu.market.client;
 
 import com.alibaba.fastjson2.JSONObject;
-import org.iushu.market.client.event.ChannelClosedEvent;
 import org.iushu.market.client.event.ChannelErrorEvent;
 import org.iushu.market.client.event.ChannelMessagingEvent;
 import org.iushu.market.client.event.ChannelOpenedEvent;
@@ -49,7 +48,7 @@ public class ChannelWebSocketHandler implements WebSocketHandler, ApplicationCon
 
     @Override
     public void handleMessage(WebSocketSession session, WebSocketMessage<?> message) {
-        logger.debug("{}", message.getPayload().toString());
+        logger.debug("<< {}", message.getPayload().toString());
         if (message instanceof TextMessage) {
             JSONObject payload = JSONObject.parseObject(message.getPayload().toString());
             try {
@@ -69,7 +68,7 @@ public class ChannelWebSocketHandler implements WebSocketHandler, ApplicationCon
     @Override
     public void handleTransportError(WebSocketSession session, Throwable exception) {
         logger.warn("transport error", exception);
-        this.eventPublisher.publishEvent(new ChannelErrorEvent<>(session, exception));
+//        this.eventPublisher.publishEvent(new ChannelErrorEvent<>(session, exception));
     }
 
     @Override
@@ -80,18 +79,15 @@ public class ChannelWebSocketHandler implements WebSocketHandler, ApplicationCon
     }
 
     public void reconnect() {
-        if (reconnectTimes < properties.getReconnectTime()) {
-            logger.info("client disconnected to {}", websocketUrl);
-            taskScheduler.schedule(() -> {
-                logger.info("{} try reconnect to {}", reconnectTimes, websocketUrl);
-                client.doHandshake(this, websocketUrl);
-                reconnectTimes++;
-            }, new Date(System.currentTimeMillis() + 2000));
-        }
-        else {
-            logger.warn("client reached max reconnect times, over");
-            this.eventPublisher.publishEvent(new ChannelClosedEvent<>(session, null));
-        }
+        logger.info("client disconnected to {}", websocketUrl);
+        long next = reconnectTimes != 0 && reconnectTimes % properties.getReconnectTime() == 0 ? 10000 : 2000;
+        taskScheduler.schedule(() -> {
+            logger.info("try reconnect to {} [{}]", websocketUrl, reconnectTimes);
+            client.doHandshake(this, websocketUrl);
+            reconnectTimes++;
+        }, new Date(System.currentTimeMillis() + next));
+        if (reconnectTimes != 0 && reconnectTimes % 20 == 0)
+            eventPublisher.publishEvent(new ChannelErrorEvent<>(this, reconnectTimes));
     }
 
     @Override

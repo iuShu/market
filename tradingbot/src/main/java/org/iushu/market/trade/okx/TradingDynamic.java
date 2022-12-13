@@ -3,6 +3,7 @@ package org.iushu.market.trade.okx;
 import com.alibaba.fastjson2.JSONObject;
 import org.iushu.market.Constants;
 import org.iushu.market.client.event.ChannelClosedEvent;
+import org.iushu.market.client.event.ChannelErrorEvent;
 import org.iushu.market.component.notify.Notifier;
 import org.iushu.market.trade.PosSide;
 import org.iushu.market.trade.okx.event.OrderClosedEvent;
@@ -12,6 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Profile;
 import org.springframework.context.event.EventListener;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
@@ -69,9 +71,20 @@ public class TradingDynamic {
         manager.close();
     }
 
-    public void notifyChannelError() {
+    @Async
+    @EventListener(ChannelErrorEvent.class)
+    public void notifyChannelError(ChannelErrorEvent event) {
+        int reconnectTimes = (int) event.getPayload();
+        String template = "#### **Channel Error**\n----\n\nwebsocket try connect %d times\n\n----\n" + currentTime();
+        notifier.notify("Channel Error", String.format(template, reconnectTimes));
+    }
+
+    @Async
+    @EventListener(ChannelClosedEvent.class)
+    public void notifyChannelExit() {
         String template = "#### **System Exit**\n----\n\nwebsocket disconnected\n\n----\n" + currentTime();
         notifier.notify("System Exit", template);
+        manager.close();
     }
 
     public static String currentTime() {

@@ -36,6 +36,7 @@ public class Tracker implements ApplicationContextAware {
     private volatile PosSide posSide = null;
     private final AtomicInteger idx = new AtomicInteger(0);
     private final AtomicBoolean processing = new AtomicBoolean(false);
+    private final AtomicInteger checker = new AtomicInteger(0);
 
     public Tracker(TradingProperties properties) {
         this.properties = properties;
@@ -52,6 +53,12 @@ public class Tracker implements ApplicationContextAware {
         int cs = contractSize(idx.get(), properties.getOrder());
         double nextOrderPrice = nextOrderPrice(firstPx, cs, posSide, properties.getOrder());
         double takeProfitPrice = takeProfitPrice(firstPx, cs, posSide, properties.getOrder());
+
+        int check = checker.get();  // debug
+        if (check != 0 && check < 8000 && checker.incrementAndGet() % 200 == 0)
+            logger.info("check {} tp={} {} nx={} {}", price, takeProfitPrice,
+                    posSide.isProfit(takeProfitPrice, price), nextOrderPrice, posSide.isLoss(nextOrderPrice, price));
+
         if (posSide.isLoss(nextOrderPrice, price))
             fillNextOrStopLoss(nextOrderPrice, price, cs);
         if (posSide.isProfit(takeProfitPrice, price))
@@ -61,6 +68,7 @@ public class Tracker implements ApplicationContextAware {
     @EventListener(OrderFilledEvent.class)
     public void firstOrderFilled(OrderFilledEvent event) {
         JSONObject data = (JSONObject) event.getSource();
+        logger.info("filled data {}", data);
         int contractSize = data.getIntValue("sz", -1);
         double accFillSz = data.getDoubleValue("accFillSz");
         String state = data.getString("state");
@@ -72,6 +80,7 @@ public class Tracker implements ApplicationContextAware {
 
         this.firstPx = data.getDoubleValue("avgPx");
         this.posSide = posSide;
+        logger.info("init param fp={} ps={}", firstPx, posSide.getName());
         placeFollowOrders(posSide);
         addMarginBalance();
     }
