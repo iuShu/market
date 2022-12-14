@@ -87,16 +87,6 @@ public class Tracker implements ApplicationContextAware {
         addMarginBalance();
     }
 
-    @EventListener(OrderSuccessorEvent.class)
-    public void onOrderSuccessor(OrderSuccessorEvent event) {
-        if (!Successor.FIRST_ORDER.equals(event.getType()))
-            return;
-
-        JSONObject filled = (JSONObject) event.getSource();
-        this.firstPx = filled.getDoubleValue("avgPx");
-        this.posSide = PosSide.of(filled.getString("posSide"));
-    }
-
     private void fillNextOrStopLoss(double nextOrderPrice, double price, int orderContractSize) {
         if (!processing.compareAndSet(false, true))
             return;
@@ -134,7 +124,7 @@ public class Tracker implements ApplicationContextAware {
             idx.set(0);
             logger.info("cancel algo orders");
             logger.info("close all follow orders");
-            eventPublisher.publishEvent(new OrderClosedEvent(null));
+            eventPublisher.publishEvent(new OrderClosedEvent(price));
             logger.info("close by take profit at {}", price);
         } catch (Exception e) {
             logger.error("take profit process error", e);

@@ -10,12 +10,14 @@ import org.iushu.market.trade.okx.PacketUtils;
 import org.iushu.market.trade.okx.config.OkxComponent;
 import org.iushu.market.trade.okx.config.SubscribeChannel;
 import org.iushu.market.trade.okx.event.OrderErrorEvent;
+import org.iushu.market.trade.okx.event.OrderSuccessorEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.event.EventListener;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -57,6 +59,15 @@ public class Tracker implements ApplicationContextAware {
         firstPx = data.getDoubleValue("avgPx");
         placeFollowOrders(session, posSide);
         addMarginBalance(posSide);
+    }
+
+    @EventListener(OrderSuccessorEvent.class)
+    public void onOrderSuccessor(OrderSuccessorEvent event) {
+        if (!Successor.FIRST_ORDER.equals(event.getType()))
+            return;
+
+        JSONObject filled = (JSONObject) event.getSource();
+        this.firstPx = filled.getDoubleValue("avgPx");
     }
 
     private void placeFollowOrders(OkxWebSocketSession session, PosSide posSide) {
