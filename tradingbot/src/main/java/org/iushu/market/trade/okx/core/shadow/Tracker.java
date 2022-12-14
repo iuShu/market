@@ -54,9 +54,9 @@ public class Tracker implements ApplicationContextAware {
         double nextOrderPrice = nextOrderPrice(firstPx, cs, posSide, properties.getOrder());
         double takeProfitPrice = takeProfitPrice(firstPx, cs, posSide, properties.getOrder());
 
-        int check = checker.get();  // debug
-        if (check != 0 && check < 8000 && checker.incrementAndGet() % 200 == 0)
-            logger.info("check {} tp={} {} nx={} {}", price, takeProfitPrice,
+        int check = checker.getAndIncrement();
+        if (check < 8000 && check % 200 == 0)
+            logger.info("{} check {} tp={} {} nx={} {}", check, price, takeProfitPrice,
                     posSide.isProfit(takeProfitPrice, price), nextOrderPrice, posSide.isLoss(nextOrderPrice, price));
 
         if (posSide.isLoss(nextOrderPrice, price))

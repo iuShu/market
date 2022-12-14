@@ -37,8 +37,8 @@ public class Initiator implements ApplicationContextAware {
     private final TradingProperties properties;
     private ApplicationEventPublisher eventPublisher;
     private final TaskScheduler taskScheduler;
-
     private final Strategy<Double> strategy;
+
     private volatile double balance = 0.0;
     private volatile String messageId = "";
     private final AtomicBoolean existed = new AtomicBoolean(false);
@@ -77,7 +77,7 @@ public class Initiator implements ApplicationContextAware {
 
     @SubscribeChannel(channel = CHANNEL_TICKERS)
     public void placeFirstOrder(OkxWebSocketSession session, JSONObject message) {
-        if (existed.get())
+        if (existed.get() || !session.isActive(session.getPrivateSession()))
             return;
 
         JSONArray data = message.getJSONArray("data");
@@ -110,6 +110,7 @@ public class Initiator implements ApplicationContextAware {
             String errMsg = "send first order failed";
             logger.warn(errMsg);
 //            eventPublisher.publishEvent(new OrderErrorEvent(errMsg));
+            existed.compareAndSet(true, false);
         }
     }
 

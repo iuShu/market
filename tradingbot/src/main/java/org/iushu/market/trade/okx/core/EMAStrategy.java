@@ -10,18 +10,13 @@ import org.iushu.market.trade.okx.config.OkxComponent;
 import org.iushu.market.trade.okx.config.SubscribeChannel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.context.event.ContextRefreshedEvent;
-import org.springframework.context.event.EventListener;
 
-import javax.annotation.PostConstruct;
 import java.math.BigDecimal;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 import static java.math.BigDecimal.ONE;
@@ -39,7 +34,8 @@ public class EMAStrategy implements Strategy<Double> {
     private final List<JSONArray> repository = new CopyOnWriteArrayList<>();
     private volatile double EMAValue = 0.0;
     private volatile long displayInterval = 0L;
-    private final Lock acceptLock = new ReentrantLock();
+    private final AtomicBoolean preparing = new AtomicBoolean(false);
+    private final AtomicBoolean accepting = new AtomicBoolean(false);
     private volatile long timestamp = 0L;
     private JSONArray current = null;
 
@@ -47,46 +43,36 @@ public class EMAStrategy implements Strategy<Double> {
         this.restTemplate = restTemplate;
     }
 
-    @EventListener(ContextRefreshedEvent.class)
     public void prepare() {
         JSONArray history = restTemplate.getCandleHistory(OkxConstants.CANDLE_BAR, MAX_REPO_ELEMENTS);
         if (history.isEmpty()) {
-            logger.error("strategy preparing error, shutdown");
-            System.exit(1);
+            logger.error("strategy preparing candle data error, using tickers data");
+            return;
         }
 
         List<JSONArray> list = history.stream().map(each -> new JSONArray((Collection) each)).collect(Collectors.toList());
         Collections.reverse(list);
         repository.addAll(list);
         calculateAndSaveValue();
-        logger.info("prepared {} candle data", repository.size());
+        logger.info("prepared {} candle data and got EMA12 {}", repository.size(), EMAValue);
     }
 
     @SubscribeChannel(channel = OkxConstants.CHANNEL_CANDLE)
     public void feedTradingData(JSONObject message) {
+        if (repository.isEmpty()) {
+            if (!preparing.compareAndSet(false, true))
+                return;
+            prepare();
+            preparing.compareAndSet(true, false);
+        }
+
         JSONArray data = message.getJSONArray("data");
         JSONArray array = data.getJSONArray(0);
         long ts = array.getLong(0);
         if (ts - timestamp == CANDLE_PERIOD_MILLISECONDS) {
-            acceptLock.lock();
-            try {
-                if (ts - timestamp != CANDLE_PERIOD_MILLISECONDS)   // recheck
-                    return;                                         // other thread has been added
-                repository.add(current);
-                timestamp = ts;
-                current = array;
-                EMAValue = calculateAndSaveValue(array.getDouble(4));
-            } finally {
-                acceptLock.unlock();
-            }
-            if (repository.size() >= MAX_REPO_ELEMENTS)
-                repository.remove(0);
-            logger.debug("accept candle data {} {}", repository.size(), this.current);
+            acceptTicker(ts, array);
             return;
         }
-//        else if (timestamp != 0 && ts != timestamp) {
-//            logger.warn("current {} but recv {}", timestamp, ts);
-//        }
         else if (timestamp == 0 && !repository.isEmpty()) {
             JSONArray last = repository.get(repository.size() - 1);
             Long lastTs = last.getLong(0);
@@ -115,6 +101,23 @@ public class EMAStrategy implements Strategy<Double> {
                 return posSide;
         }
         return null;
+    }
+
+    private void acceptTicker(long ts, JSONArray array) {
+        if (!accepting.compareAndSet(false, true) || ts - timestamp != CANDLE_PERIOD_MILLISECONDS)
+            return;
+
+        try {
+            repository.add(current);
+            timestamp = ts;
+            current = array;
+            EMAValue = calculateAndSaveValue(array.getDouble(4));
+            if (repository.size() >= MAX_REPO_ELEMENTS)
+                repository.remove(0);
+            logger.debug("accept candle data {} {}", repository.size(), this.current);
+        } finally {
+            accepting.compareAndSet(true, false);
+        }
     }
 
     private void calculateAndSaveValue() {

@@ -67,14 +67,13 @@ public class DispatchManager {
         JSONObject packet;
         if (apiInfo.getWsPrivateUrl().equals(handler.getWebsocketUrl())) {
             this.session.setPrivateSession(session);
+            logger.info("ws-private ready to login");
             packet = PacketUtils.loginPacket(apiInfo.getApiKey(), apiInfo.getSecret(), apiInfo.getPassphrase());
             boolean r = this.session.sendPrivateMessage(packet);
             logger.info("ws-private {} login packet", r ? "sent" : "failed send");
         }
         else {
             this.session.setPublicSession(session);
-            logger.info("ws-public waiting");
-            waitOther();
             packet = subscribeChannelPacket(false);
             this.session.sendPublicMessage(packet);
         }
@@ -148,7 +147,6 @@ public class DispatchManager {
 
     @SubscribeChannel(event = EVENT_SUBSCRIBE)
     public void subscribeResponse(JSONObject message) {
-        waitOther();
         JSONObject arg = message.getJSONObject("arg");
         logger.info("subscribed to channel {}", arg.getString("channel"));
     }

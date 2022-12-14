@@ -3,7 +3,6 @@ package org.iushu.market.client;
 import org.iushu.market.config.TradingProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.core.task.AsyncListenableTaskExecutor;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.util.concurrent.ListenableFuture;
 import org.springframework.web.socket.PingMessage;
@@ -15,6 +14,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Date;
 import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
@@ -41,20 +41,14 @@ public class TradingWebSocketClient extends StandardWebSocketClient {
         channelWebSocketHandler.setTaskScheduler(taskScheduler);
         channelWebSocketHandler.setWebsocketUrl(uriTemplate);
         ListenableFuture<WebSocketSession> doHandshake = super.doHandshake(webSocketHandler, uriTemplate, uriVars);
-        Runnable afterConnected = () -> {
-            try {
-                this.session = doHandshake.get();
-                scheduleHeartbeat();
-            } catch (Exception e) {
-                logger.error("after connected task error", e);
-                channelWebSocketHandler.reconnect();
-            }
-        };
-        AsyncListenableTaskExecutor taskExecutor = getTaskExecutor();
-        if (taskExecutor != null)
-            taskExecutor.submit(afterConnected);
-        else
-            afterConnected.run();
+        try {
+            this.session = doHandshake.get(30, TimeUnit.SECONDS);
+            logger.info("heartbeat scheduled {}", wsUrl);
+            scheduleHeartbeat();
+        } catch (Exception e) {
+            logger.error("{} connect failed", wsUrl);
+            channelWebSocketHandler.reconnect();
+        }
         return doHandshake;
     }
 

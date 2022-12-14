@@ -75,7 +75,7 @@ public class OkxWebSocketSession {
         }
     }
 
-    private boolean isActive(WebSocketSession session) {
+    public boolean isActive(WebSocketSession session) {
         return session != null && session.isOpen();
     }
 
