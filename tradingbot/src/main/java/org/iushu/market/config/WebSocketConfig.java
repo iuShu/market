@@ -61,6 +61,10 @@ public class WebSocketConfig {
         return new ChannelWebSocketHandler(webSocketProperties);
     }
 
+    /**
+     * other action can be processed before websocket connected, by listening ContextRefreshedEvent
+     * @see org.springframework.context.event.ContextRefreshedEvent
+     */
     @EventListener(ApplicationReadyEvent.class)
     public void connect(ApplicationReadyEvent event) {
         ConfigurableApplicationContext context = event.getApplicationContext();

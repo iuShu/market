@@ -181,6 +181,38 @@ public class OkxRestTemplate implements ApplicationContextAware {
         return checkResp(response, "add extra margin");
     }
 
+    public JSONArray getOrderHistory() {
+        JSONObject body = JSONObject.of("instId", properties.getInstId());
+        body.put("instType", properties.getInstType());
+        body.put("limit", 10);
+        HttpEntity<JSONObject> entity = entity(HttpMethod.GET, OkxConstants.GET_ORDER_HISTORY, body);
+        JSONObject response = get(OkxConstants.GET_ORDER_HISTORY, entity);
+        if (checkResp(response, "get order history"))
+            return response.getJSONArray("data");
+        return JSONArray.of();
+    }
+
+    public JSONArray getPendingOrders(String orderType) {
+        JSONObject body = JSONObject.of("instId", properties.getInstId());
+        body.put("instType", properties.getInstType());
+        body.put("ordType", orderType);
+        HttpEntity<JSONObject> entity = entity(HttpMethod.GET, OkxConstants.GET_PENDING_ORDER, body);
+        JSONObject response = get(OkxConstants.GET_PENDING_ORDER, entity);
+        if (checkResp(response, "get pending order"))
+            return response.getJSONArray("data");
+        return JSONArray.of();
+    }
+
+    public JSONArray getPendingAlgo() {
+        JSONObject body = JSONObject.of("ordType", Constants.ALGO_TYPE_OCO);
+        body.put("instType", properties.getInstType());
+        HttpEntity<JSONObject> entity = entity(HttpMethod.GET, OkxConstants.GET_PENDING_ALGO, body);
+        JSONObject response = get(OkxConstants.GET_PENDING_ALGO, entity);
+        if (checkResp(response, "get pending algo"))
+            return response.getJSONArray("data");
+        return JSONArray.of();
+    }
+
     private static boolean checkResp(JSONObject response, String topic) {
         if (response != null && response.getIntValue("code", -1) == 0)
             return true;

@@ -36,6 +36,9 @@ public interface OkxConstants {
     String GET_BALANCE = "/api/v5/account/balance";
     String ADD_MARGIN = "/api/v5/account/position/margin-balance";
 
+    String GET_ORDER_HISTORY = "/api/v5/trade/orders-history";
+    String GET_PENDING_ORDER = "/api/v5/trade/orders-pending";
+    String GET_PENDING_ALGO = "/api/v5/trade/orders-algo-pending";
     String PLACE_ALGO = "/api/v5/trade/order-algo";
     String CANCEL_ALGO = "/api/v5/trade/cancel-algos";
     String CLOSE_POSITION = "/api/v5/trade/close-position";

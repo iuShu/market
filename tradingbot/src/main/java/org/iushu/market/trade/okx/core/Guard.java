@@ -8,6 +8,7 @@ import org.iushu.market.trade.okx.config.OkxComponent;
 import org.iushu.market.trade.okx.config.SubscribeChannel;
 import org.iushu.market.trade.okx.event.OrderClosedEvent;
 import org.iushu.market.trade.okx.event.OrderFilledEvent;
+import org.iushu.market.trade.okx.event.OrderSuccessorEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
@@ -95,6 +96,18 @@ public class Guard implements ApplicationContextAware {
         logger.warn(errMsg);
 //        eventPublisher.publishEvent(new OrderErrorEvent(errMsg));
         return false;
+    }
+
+    @EventListener(OrderSuccessorEvent.class)
+    public void onOrderSuccessor(OrderSuccessorEvent event) {
+        if (Successor.ALGO_ORDER.equals(event.getType())) {
+            JSONObject algo = (JSONObject) event.getSource();
+            algoId = algo.getString("algoId");
+        }
+        else if (Successor.FIRST_ORDER.equals(event.getType())) {
+            JSONObject filled = (JSONObject) event.getSource();
+            firstPx = filled.getDoubleValue("avgPx");
+        }
     }
 
     @EventListener(OrderClosedEvent.class)

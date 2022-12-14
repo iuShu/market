@@ -9,6 +9,7 @@ import org.iushu.market.trade.okx.config.OkxComponent;
 import org.iushu.market.trade.okx.config.SubscribeChannel;
 import org.iushu.market.trade.okx.event.OrderClosedEvent;
 import org.iushu.market.trade.okx.event.OrderErrorEvent;
+import org.iushu.market.trade.okx.event.OrderSuccessorEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
@@ -136,6 +137,12 @@ public class Initiator implements ApplicationContextAware {
         logger.error("place first order failed {}", message.toString());
         existed.compareAndSet(true, false);     // recover
 //        eventPublisher.publishEvent(new OrderErrorEvent(message));
+    }
+
+    @EventListener(OrderSuccessorEvent.class)
+    public void onOrderSuccessor(OrderSuccessorEvent event) {
+        if (existed.compareAndSet(false, true))
+            logger.error("successor processing failed");
     }
 
     @EventListener(OrderClosedEvent.class)

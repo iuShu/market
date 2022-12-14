@@ -8,15 +8,15 @@ import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.ssl.SSLContexts;
 import org.iushu.market.Constants;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.boot.task.TaskExecutorBuilder;
 import org.springframework.boot.task.TaskSchedulerBuilder;
 import org.springframework.boot.web.client.RestTemplateBuilder;
-import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import org.springframework.context.annotation.Profile;
+import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.context.event.SimpleApplicationEventMulticaster;
 import org.springframework.core.task.TaskExecutor;
@@ -51,7 +51,7 @@ public class ApplicationConfig {
     }
 
     @Bean
-    @Profile({"test", Constants.EXChANGE_OKX})
+    @Profile(Constants.EXChANGE_OKX)
     public RestTemplate testRestTemplate(RestTemplateBuilder builder) {
         try {
             RequestConfig requestConfig = RequestConfig.custom().setConnectTimeout(10000)
@@ -68,9 +68,9 @@ public class ApplicationConfig {
         }
     }
 
-    @EventListener(ApplicationReadyEvent.class)
-    public void onReady(ApplicationReadyEvent event) {
-        ConfigurableApplicationContext context = event.getApplicationContext();
+    @EventListener(ContextRefreshedEvent.class)
+    public void onReady(ContextRefreshedEvent event) {
+        ApplicationContext context = event.getApplicationContext();
         SimpleApplicationEventMulticaster multicaster = context.getBean(APPLICATION_EVENT_MULTICASTER_BEAN_NAME, SimpleApplicationEventMulticaster.class);
         TaskExecutor executor = context.getBean(TaskExecutor.class);
         multicaster.setTaskExecutor(executor);

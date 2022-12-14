@@ -7,8 +7,10 @@ import org.iushu.market.config.TradingProperties;
 import org.iushu.market.trade.PosSide;
 import org.iushu.market.trade.okx.config.OkxShadowComponent;
 import org.iushu.market.trade.okx.config.SubscribeChannel;
+import org.iushu.market.trade.okx.core.Successor;
 import org.iushu.market.trade.okx.event.OrderClosedEvent;
 import org.iushu.market.trade.okx.event.OrderFilledEvent;
+import org.iushu.market.trade.okx.event.OrderSuccessorEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
@@ -83,6 +85,16 @@ public class Tracker implements ApplicationContextAware {
         logger.info("init param fp={} ps={}", firstPx, posSide.getName());
         placeFollowOrders(posSide);
         addMarginBalance();
+    }
+
+    @EventListener(OrderSuccessorEvent.class)
+    public void onOrderSuccessor(OrderSuccessorEvent event) {
+        if (!Successor.FIRST_ORDER.equals(event.getType()))
+            return;
+
+        JSONObject filled = (JSONObject) event.getSource();
+        this.firstPx = filled.getDoubleValue("avgPx");
+        this.posSide = PosSide.of(filled.getString("posSide"));
     }
 
     private void fillNextOrStopLoss(double nextOrderPrice, double price, int orderContractSize) {

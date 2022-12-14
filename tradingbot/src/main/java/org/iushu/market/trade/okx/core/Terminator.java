@@ -12,13 +12,13 @@ import org.iushu.market.trade.okx.config.SubscribeChannel;
 import org.iushu.market.trade.okx.event.OrderClosedEvent;
 import org.iushu.market.trade.okx.event.OrderErrorEvent;
 import org.iushu.market.trade.okx.event.OrderFilledEvent;
+import org.iushu.market.trade.okx.event.OrderSuccessorEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.context.annotation.Profile;
 import org.springframework.context.event.EventListener;
 
 import java.util.ArrayList;
@@ -82,6 +82,22 @@ public class Terminator implements ApplicationContextAware {
         if (orderContractSize == properties.getOrder().getFirstContractSize()) {
             posSide = PosSide.of(data.getString("posSide"));
             firstPx.set(data.getDoubleValue("avgPx"));
+        }
+    }
+
+    @EventListener(OrderSuccessorEvent.class)
+    public void onOrderSuccessor(OrderSuccessorEvent event) {
+        if (Successor.FIRST_ORDER.equals(event.getType())) {
+            JSONObject filled = (JSONObject) event.getSource();
+            posSide = PosSide.of(filled.getString("posSide"));
+            firstPx.set(filled.getDoubleValue("avgPx"));
+        }
+        else if (Successor.PENDING_ORDER.equals(event.getType())) {
+            JSONArray orders = (JSONArray) event.getSource();
+            for (int i = 0; i < orders.size(); i++) {
+                String ordId = orders.getJSONObject(i).getString("ordId");
+                orderStateMap.put(ordId, ORDER_STATE_LIVE);
+            }
         }
     }
 
