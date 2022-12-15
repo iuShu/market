@@ -9,11 +9,11 @@ import org.iushu.market.trade.PosSide;
 import org.iushu.market.trade.okx.event.OrderClosedEvent;
 import org.iushu.market.trade.okx.event.OrderErrorEvent;
 import org.iushu.market.trade.okx.event.OrderFilledEvent;
+import org.iushu.market.trade.okx.event.TradingStopEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Profile;
 import org.springframework.context.event.EventListener;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
@@ -71,7 +71,6 @@ public class TradingDynamic {
         manager.close();
     }
 
-    @Async
     @EventListener(ChannelErrorEvent.class)
     public void notifyChannelError(ChannelErrorEvent event) {
         int reconnectTimes = (int) event.getPayload();
@@ -79,11 +78,17 @@ public class TradingDynamic {
         notifier.notify("Channel Error", String.format(template, reconnectTimes));
     }
 
-    @Async
     @EventListener(ChannelClosedEvent.class)
     public void notifyChannelExit() {
         String template = "#### **System Exit**\n----\n\nwebsocket disconnected\n\n----\n" + currentTime();
         notifier.notify("System Exit", template);
+        manager.close();
+    }
+
+    @EventListener(TradingStopEvent.class)
+    public void notifyTradingStop() {
+        String template = "#### **Trading Stop**\n----\n\nfound stop signal, stop trading\n\n----\n" + currentTime();
+        notifier.notify("Trading Stop", template);
         manager.close();
     }
 

@@ -10,6 +10,7 @@ import org.iushu.market.trade.okx.config.SubscribeChannel;
 import org.iushu.market.trade.okx.event.OrderClosedEvent;
 import org.iushu.market.trade.okx.event.OrderErrorEvent;
 import org.iushu.market.trade.okx.event.OrderSuccessorEvent;
+import org.iushu.market.trade.okx.event.TradingStopEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
@@ -157,7 +158,7 @@ public class Initiator implements ApplicationContextAware {
         }
 
         logger.info("found stop signal at {}, system exit", stopFile.getPath());
-        System.exit(1);
+        eventPublisher.publishEvent(TradingStopEvent.event());
     }
 
     private void refreshAccountBalance() {
