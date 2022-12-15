@@ -95,7 +95,6 @@ public class Initiator implements ApplicationContextAware {
             return;
 
         logger.info("sent first order {} {}", price, properties.getOrder().getFirstContractSize());
-        logger.info("placed first order at {}", price);
 
         JSONObject filled = JSONObject.of("sz", properties.getOrder().getFirstContractSize());
         filled.put("avgPx", price);
