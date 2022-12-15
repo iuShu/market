@@ -11,7 +11,6 @@ import org.iushu.market.trade.okx.Strategy;
 import org.iushu.market.trade.okx.config.OkxShadowComponent;
 import org.iushu.market.trade.okx.config.SubscribeChannel;
 import org.iushu.market.trade.okx.event.OrderClosedEvent;
-import org.iushu.market.trade.okx.event.OrderErrorEvent;
 import org.iushu.market.trade.okx.event.OrderFilledEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,6 +22,7 @@ import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.TaskScheduler;
 
+import java.io.File;
 import java.util.Date;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -40,6 +40,7 @@ public class Initiator implements ApplicationContextAware {
     private final TradingProperties properties;
     private ApplicationEventPublisher eventPublisher;
     private final TaskScheduler taskScheduler;
+    private final File stopFile;
 
     private final Strategy<Double> strategy;
     private volatile double balance = 0.0;
@@ -51,6 +52,7 @@ public class Initiator implements ApplicationContextAware {
         this.restTemplate = restTemplate;
         this.properties = properties;
         this.taskScheduler = taskScheduler;
+        this.stopFile = new File(properties.getStopFile());
     }
 
     @EventListener(ContextRefreshedEvent.class)
@@ -94,7 +96,7 @@ public class Initiator implements ApplicationContextAware {
         if (existed.get() || !existed.compareAndSet(false, true))
             return;
 
-        logger.info("sent first order {} {}", price, properties.getOrder().getFirstContractSize());
+        logger.info("sent first order {} {} {}", price, properties.getOrder().getFirstContractSize(), posSide.getName());
 
         JSONObject filled = JSONObject.of("sz", properties.getOrder().getFirstContractSize());
         filled.put("avgPx", price);
@@ -107,9 +109,15 @@ public class Initiator implements ApplicationContextAware {
 
     @EventListener(OrderClosedEvent.class)
     public void onOrderClose(OrderClosedEvent event) {
-        taskScheduler.schedule(() -> existed.compareAndSet(true, false), new Date(System.currentTimeMillis() + 5000));
         refreshAccountBalance();
         logger.info("{} batch order closed, balance {}, ready to next round", batch.getAndIncrement(), balance);
+        if (!stopFile.exists()) {
+            taskScheduler.schedule(() -> existed.compareAndSet(true, false), new Date(System.currentTimeMillis() + 5000));
+            return;
+        }
+
+        logger.info("found stop signal at {}, system exit", stopFile.getPath());
+        System.exit(1);
     }
 
     private void refreshAccountBalance() {

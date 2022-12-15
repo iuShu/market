@@ -7,10 +7,12 @@ import org.springframework.scheduling.TaskScheduler;
 import org.springframework.util.concurrent.ListenableFuture;
 import org.springframework.web.socket.PingMessage;
 import org.springframework.web.socket.WebSocketHandler;
+import org.springframework.web.socket.WebSocketHttpHeaders;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.client.standard.StandardWebSocketClient;
 
 import java.io.IOException;
+import java.net.URI;
 import java.nio.ByteBuffer;
 import java.util.Date;
 import java.util.concurrent.ScheduledFuture;
@@ -40,12 +42,14 @@ public class TradingWebSocketClient extends StandardWebSocketClient {
         channelWebSocketHandler.setClient(this);
         channelWebSocketHandler.setTaskScheduler(taskScheduler);
         channelWebSocketHandler.setWebsocketUrl(uriTemplate);
-        ListenableFuture<WebSocketSession> doHandshake = super.doHandshake(webSocketHandler, uriTemplate, uriVars);
+        WebSocketHttpHeaders headers = new WebSocketHttpHeaders();
+        headers.add("x-simulated-trading", "1");
+        ListenableFuture<WebSocketSession> doHandshake = super.doHandshake(webSocketHandler, headers, URI.create(uriTemplate));
         try {
             WebSocketSession raw = doHandshake.get(30, TimeUnit.SECONDS);
             this.session = new WrapWebSocketSession(raw);
-//            logger.info("heartbeat scheduled {}", wsUrl);
-//            scheduleHeartbeat();
+            logger.info("heartbeat scheduled {}", wsUrl);
+            scheduleHeartbeat();
         } catch (Exception e) {
             logger.error("{} connect failed", wsUrl);
             channelWebSocketHandler.reconnect();

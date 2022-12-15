@@ -1,12 +1,12 @@
 spring:
   profiles:
-    active: test, ${trade.exchange}
+    active: shadow, ${trade.exchange}
   main:
     web-application-type: none
 
 logging:
   level:
-    root: debug
+    root: info
 
 jasypt:
   encryptor:
@@ -15,7 +15,7 @@ jasypt:
     salt-generator-classname: org.jasypt.salt.ZeroSaltGenerator
 
 websocket:
-  reconnectTime: 5
+  reconnectTime: 10
 
 trade:
   exchange: okx
@@ -25,6 +25,7 @@ trade:
   instId: ${trade.inst}-${trade.currency}-${trade.instType}
   tdMode: isolated
   lever: 60
+  stopFile: /opt/trading/stop-shadow
 
   order:
     faceValue: 0.001

@@ -18,6 +18,7 @@ public class TradingProperties {
     private String tdMode;
     private int lever;
     private long heartbeatPeriod = 10000;   // millisecond
+    private String stopFile;
 
     private final TradingProperties.Notify notify = new TradingProperties.Notify();
     private final TradingProperties.Okx okx = new TradingProperties.Okx();
@@ -306,6 +307,14 @@ public class TradingProperties {
 
     public void setHeartbeatPeriod(long heartbeatPeriod) {
         this.heartbeatPeriod = heartbeatPeriod;
+    }
+
+    public String getStopFile() {
+        return stopFile;
+    }
+
+    public void setStopFile(String stopFile) {
+        this.stopFile = stopFile;
     }
 
     public Notify getNotify() {

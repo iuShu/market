@@ -27,12 +27,13 @@ import static org.iushu.market.trade.okx.OkxConstants.CANDLE_PERIOD_MILLISECONDS
 public class EMAStrategy implements Strategy<Double> {
 
     private static final Logger logger = LoggerFactory.getLogger(EMAStrategy.class);
-    private static final int PERIOD = 12;
-    private static final int MAX_REPO_ELEMENTS = 200;
+
+    public static final int PERIOD = 12;
+    public static final int MAX_REPO_ELEMENTS = 200;
 
     private final OkxRestTemplate restTemplate;
-    private final List<JSONArray> repository = new CopyOnWriteArrayList<>();
-    private volatile double EMAValue = 0.0;
+    protected final List<JSONArray> repository = new CopyOnWriteArrayList<>();
+    protected volatile double EMAValue = 0.0;
     private volatile long displayInterval = 0L;
     private final AtomicBoolean preparing = new AtomicBoolean(false);
     private final AtomicBoolean accepting = new AtomicBoolean(false);
@@ -53,7 +54,7 @@ public class EMAStrategy implements Strategy<Double> {
         List<JSONArray> list = history.stream().map(each -> new JSONArray((Collection) each)).collect(Collectors.toList());
         Collections.reverse(list);
         repository.addAll(list);
-        calculateAndSaveValue();
+        calculateByHistory();
         logger.info("prepared {} candle data and got EMA12 {}", repository.size(), EMAValue);
     }
 
@@ -90,17 +91,11 @@ public class EMAStrategy implements Strategy<Double> {
 
     @Override
     public PosSide trend(Double price) {
-        if (EMAValue == 0) {
-//            logger.warn("unexpected EMA value");
+        if (EMAValue == 0)
             return null;
-        }
 
-        double currentEMA = calculateAndSaveValue(price);
-        for (PosSide posSide : PosSide.values()) {
-            if (posSide.isProfit(currentEMA, price))
-                return posSide;
-        }
-        return null;
+        double currentEma = calculateByPrevious(price);
+        return currentEma > price ? PosSide.ShortSide : PosSide.LongSide;
     }
 
     private void acceptTicker(long ts, JSONArray array) {
@@ -111,7 +106,7 @@ public class EMAStrategy implements Strategy<Double> {
             repository.add(current);
             timestamp = ts;
             current = array;
-            EMAValue = calculateAndSaveValue(array.getDouble(4));
+            EMAValue = calculateByPrevious(array.getDouble(4));
             if (repository.size() >= MAX_REPO_ELEMENTS)
                 repository.remove(0);
             logger.debug("accept candle data {} {}", repository.size(), this.current);
@@ -120,7 +115,7 @@ public class EMAStrategy implements Strategy<Double> {
         }
     }
 
-    private void calculateAndSaveValue() {
+    protected void calculateByHistory() {
         BigDecimal EMA = null;
         BigDecimal period = decimal(PERIOD);
         for (JSONArray each : repository) {
@@ -132,7 +127,7 @@ public class EMAStrategy implements Strategy<Double> {
         EMAValue = EMA == null ? 0.0 : doubleNum(EMA);
     }
 
-    private double calculateAndSaveValue(double price) {
+    protected double calculateByPrevious(double price) {
         BigDecimal period = decimal(PERIOD);
         BigDecimal px = decimal(price);
         BigDecimal previous = decimal(EMAValue);

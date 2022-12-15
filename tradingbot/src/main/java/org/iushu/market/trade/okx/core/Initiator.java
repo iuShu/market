@@ -20,6 +20,7 @@ import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.TaskScheduler;
 
+import java.io.File;
 import java.util.Date;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -39,6 +40,7 @@ public class Initiator implements ApplicationContextAware {
     private ApplicationEventPublisher eventPublisher;
     private final TaskScheduler taskScheduler;
     private final Strategy<Double> strategy;
+    private final File stopFile;
 
     private volatile double balance = 0.0;
     private volatile String messageId = "";
@@ -51,6 +53,7 @@ public class Initiator implements ApplicationContextAware {
         this.restTemplate = restTemplate;
         this.properties = properties;
         this.taskScheduler = taskScheduler;
+        this.stopFile = new File(properties.getStopFile());
     }
 
     @EventListener(ContextRefreshedEvent.class)
@@ -104,7 +107,7 @@ public class Initiator implements ApplicationContextAware {
             return;
 
         if (session.sendPrivateMessage(packet)) {
-            logger.info("sent first order {} {}", price, properties.getOrder().getFirstContractSize());
+            logger.info("sent first order {} {} {}", price, properties.getOrder().getFirstContractSize(), posSide.getName());
             messageId = packet.getString("id");
         }
         else {
@@ -144,11 +147,17 @@ public class Initiator implements ApplicationContextAware {
 
     @EventListener(OrderClosedEvent.class)
     public void onOrderClose(OrderClosedEvent event) {
-        taskScheduler.schedule(() -> existed.compareAndSet(true, false), new Date(System.currentTimeMillis() + 5000));
         refreshAccountBalance();
         JSONObject data = (JSONObject) event.getSource();
         String pnl = data.getString("pnl");
         logger.info("{} batch order closed, balance {} {}, ready to next round", batch.getAndIncrement(), balance, pnl);
+        if (!stopFile.exists()) {
+            taskScheduler.schedule(() -> existed.compareAndSet(true, false), new Date(System.currentTimeMillis() + 5000));
+            return;
+        }
+
+        logger.info("found stop signal at {}, system exit", stopFile.getPath());
+        System.exit(1);
     }
 
     private void refreshAccountBalance() {
