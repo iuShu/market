@@ -70,6 +70,7 @@ public class Terminator implements ApplicationContextAware {
 
         cancelLiveOrders(session);
         firstPx.set(0.0);
+        this.posSide = null;
         orderStateMap.clear();
         eventPublisher.publishEvent(new OrderClosedEvent(data));
     }
