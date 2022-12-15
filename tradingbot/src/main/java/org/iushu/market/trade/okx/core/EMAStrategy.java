@@ -91,7 +91,7 @@ public class EMAStrategy implements Strategy<Double> {
     @Override
     public PosSide trend(Double price) {
         if (EMAValue == 0) {
-            logger.warn("unexpected EMA value");
+//            logger.warn("unexpected EMA value");
             return null;
         }
 

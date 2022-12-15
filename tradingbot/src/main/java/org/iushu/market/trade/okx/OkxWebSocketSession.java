@@ -53,9 +53,7 @@ public class OkxWebSocketSession {
         }
 
         try {
-            synchronized (session) {
-                session.sendMessage(new TextMessage(message.toJSONString()));
-            }
+            session.sendMessage(new TextMessage(message.toJSONString()));
             return true;
         } catch (Exception e) {
             logger.error("send message error {}", message.toJSONString(), e);

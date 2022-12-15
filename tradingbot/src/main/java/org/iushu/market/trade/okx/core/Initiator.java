@@ -110,7 +110,6 @@ public class Initiator implements ApplicationContextAware {
         else {
             String errMsg = "send first order failed";
             logger.warn(errMsg);
-//            eventPublisher.publishEvent(new OrderErrorEvent(errMsg));
             existed.compareAndSet(true, false);
         }
     }
@@ -125,7 +124,6 @@ public class Initiator implements ApplicationContextAware {
         if (SUCCESS == code) {
             messageId = "";
             failure.set(5);
-            logger.info("placed first order {} success", mid);
             return;
         }
 
@@ -136,7 +134,6 @@ public class Initiator implements ApplicationContextAware {
         }
         logger.error("place first order failed {}", message.toString());
         existed.compareAndSet(true, false);     // recover
-//        eventPublisher.publishEvent(new OrderErrorEvent(message));
     }
 
     @EventListener(OrderSuccessorEvent.class)

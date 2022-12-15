@@ -42,8 +42,7 @@ public class ChannelWebSocketHandler implements WebSocketHandler, ApplicationCon
         logger.info("connect established {}", websocketUrl);
         reconnectTimes = 0;
         this.session = session;
-        Date time = new Date(System.currentTimeMillis() + 3000);
-        taskScheduler.schedule(() -> this.eventPublisher.publishEvent(new ChannelOpenedEvent<>(this, session)), time);
+        this.eventPublisher.publishEvent(new ChannelOpenedEvent<>(this, session));
     }
 
     @Override

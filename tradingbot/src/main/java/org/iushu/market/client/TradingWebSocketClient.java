@@ -42,9 +42,10 @@ public class TradingWebSocketClient extends StandardWebSocketClient {
         channelWebSocketHandler.setWebsocketUrl(uriTemplate);
         ListenableFuture<WebSocketSession> doHandshake = super.doHandshake(webSocketHandler, uriTemplate, uriVars);
         try {
-            this.session = doHandshake.get(30, TimeUnit.SECONDS);
-            logger.info("heartbeat scheduled {}", wsUrl);
-            scheduleHeartbeat();
+            WebSocketSession raw = doHandshake.get(30, TimeUnit.SECONDS);
+            this.session = new WrapWebSocketSession(raw);
+//            logger.info("heartbeat scheduled {}", wsUrl);
+//            scheduleHeartbeat();
         } catch (Exception e) {
             logger.error("{} connect failed", wsUrl);
             channelWebSocketHandler.reconnect();
@@ -98,9 +99,7 @@ public class TradingWebSocketClient extends StandardWebSocketClient {
             if (!isActive())
                 return;
 
-            synchronized (session) {
-                session.sendMessage(new PingMessage(ByteBuffer.wrap("ping".getBytes(UTF_8))));
-            }
+            session.sendMessage(new PingMessage(ByteBuffer.wrap("ping".getBytes(UTF_8))));
             scheduleHeartbeat();
         } catch (IOException e) {
             logger.error("send heartbeat error", e);

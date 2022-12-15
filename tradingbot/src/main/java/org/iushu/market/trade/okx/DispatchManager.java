@@ -75,7 +75,8 @@ public class DispatchManager {
         else {
             this.session.setPublicSession(session);
             packet = subscribeChannelPacket(false);
-            this.session.sendPublicMessage(packet);
+            if (this.session.sendPublicMessage(packet))
+                logger.info("ws-public sent subscribe packet");
         }
     }
 
@@ -148,7 +149,7 @@ public class DispatchManager {
     @SubscribeChannel(event = EVENT_SUBSCRIBE)
     public void subscribeResponse(JSONObject message) {
         JSONObject arg = message.getJSONObject("arg");
-        logger.info("subscribed to channel {}", arg.getString("channel"));
+        logger.info("subscribed channel [{}]", arg.getString("channel"));
     }
 
     @SubscribeChannel(event = EVENT_ERROR)

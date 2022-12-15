@@ -3,6 +3,7 @@ package org.iushu.market.config;
 import org.iushu.market.Constants;
 import org.iushu.market.client.ChannelWebSocketHandler;
 import org.iushu.market.client.TradingWebSocketClient;
+import org.iushu.market.component.MultiProfile;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ConfigurableApplicationContext;
@@ -44,7 +45,7 @@ public class WebSocketConfig {
     }
 
     @Bean
-    @Profile(Constants.EXChANGE_OKX)
+    @MultiProfile({Constants.EXChANGE_OKX, "test"})
     public WebSocketClient privateClient() {
         TradingWebSocketClient webSocketClient = new TradingWebSocketClient();
         webSocketClient.setWsUrl(apiInfo.getWsPrivateUrl());
@@ -56,7 +57,7 @@ public class WebSocketConfig {
     }
 
     @Bean("privateChannelHandler")
-    @Profile(Constants.EXChANGE_OKX)
+    @MultiProfile({Constants.EXChANGE_OKX, "test"})
     public WebSocketHandler privateChannelHandler() {
         return new ChannelWebSocketHandler(webSocketProperties);
     }
