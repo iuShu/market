@@ -57,7 +57,7 @@ trade:
   notify:
     windows: false
     robot: false
-    webhook: ENC(BDVXdsxuy1juYOmrgs+aKCv1A7URLxWTbnuS1BJQxVnYr6PM0f5xEZBX9uMmPZorMEKjag5Mr8TNCBYK9qx5uAxwVgvC03iN+SBIAxGgEAIy3CVJGoejhVrke7XnZ8c1iQNZ5TvzALfOZo0HBbhqSZ4SMyTYOxPg)
-    secret: ENC(gD2ZslB+WiWhqgobxGZzB62tbFMnRS35vk7EQrmUh5Put34ofM2OzlaqaNurLwiXvKZpv8KOBP3Zd7amMWwybDjC+zjj6xxU)
+    webhook:
+    secret:
     rateLimited: 20
     limitedPeriod: 60000
