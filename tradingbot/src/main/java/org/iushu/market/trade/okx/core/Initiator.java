@@ -151,6 +151,7 @@ public class Initiator implements ApplicationContextAware {
         refreshAccountBalance();
         JSONObject data = (JSONObject) event.getSource();
         String pnl = data.getString("pnl");
+        logger.info("closed by take profit at {}", data.getDoubleValue("px"));
         logger.info("{} batch order closed, balance {} {}, ready to next round", batch.getAndIncrement(), balance, pnl);
         if (!stopFile.exists()) {
             taskScheduler.schedule(() -> existed.compareAndSet(true, false), new Date(System.currentTimeMillis() + 5000));
