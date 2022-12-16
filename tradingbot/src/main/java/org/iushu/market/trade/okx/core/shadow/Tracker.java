@@ -55,12 +55,6 @@ public class Tracker implements ApplicationContextAware {
         int cs = contractSize(idx.get(), properties.getOrder());
         double nextOrderPrice = nextOrderPrice(firstPx, cs, posSide, properties.getOrder());
         double takeProfitPrice = takeProfitPrice(firstPx, cs, posSide, properties.getOrder());
-
-        int check = checker.get() < 8000 ? checker.getAndIncrement() : checker.get();
-        if (check < 8000 && check % 200 == 0)
-            logger.info("{} check {} tp={} {} nx={} {}", check, price, takeProfitPrice,
-                    posSide.isProfit(takeProfitPrice, price), nextOrderPrice, posSide.isLoss(nextOrderPrice, price));
-
         if (posSide.isLoss(nextOrderPrice, price))
             fillNextOrStopLoss(nextOrderPrice, price, cs);
         if (posSide.isProfit(takeProfitPrice, price))
@@ -102,7 +96,7 @@ public class Tracker implements ApplicationContextAware {
                 orderContractSize = nextContractSize(orderContractSize, properties.getOrder());
                 JSONObject filled = JSONObject.of("sz", orderContractSize);
                 filled.put("avgPx", nextOrderPrice);
-                filled.put("posSide", posSide);
+                filled.put("posSide", posSide.getName());
                 filled.put("accFillSz", orderContractSize);
                 filled.put("state", Constants.ORDER_STATE_FILLED);
                 filled.put("side", posSide.openSide());

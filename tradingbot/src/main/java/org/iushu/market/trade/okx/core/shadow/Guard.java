@@ -32,14 +32,14 @@ public class Guard {
         int size = data.getIntValue("sz");
         double avgPx = data.getDoubleValue("avgPx");
         PosSide posSide = PosSide.of(data.getString("posSide"));
-        logger.info("filled order at {} {} {}", avgPx, posSide.getName(), size);
         if (size == properties.getOrder().getFirstContractSize())
             firstPx = avgPx;
 
         int ttlCs = totalContractSize(size, properties.getOrder());
         double tpPx = takeProfitPrice(firstPx, size, posSide, properties.getOrder());
+        double nxPx = nextOrderPrice(firstPx, size, posSide, properties.getOrder());
         double slPx = stopLossPrice(firstPx, posSide, properties.getOrder());
-        logger.info("placed algo order {} tp={} sl={}", ttlCs, tpPx, slPx);
+        logger.info("placed algo order {} tp={} nx={} sl={}", ttlCs, tpPx, nxPx, slPx);
     }
 
     @EventListener(OrderClosedEvent.class)
