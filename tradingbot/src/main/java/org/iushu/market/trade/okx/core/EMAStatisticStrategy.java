@@ -54,6 +54,7 @@ public class EMAStatisticStrategy extends EMAStrategy {
             else
                 shortCount++;
         }
+        logger.info("trend statistics long={} short={}", longCount, shortCount);
         return longCount > shortCount ? PosSide.LongSide : PosSide.ShortSide;
     }
 
@@ -78,7 +79,6 @@ public class EMAStatisticStrategy extends EMAStrategy {
             EMA = add(left, div(mlt(sub(period, ONE), EMA), add(period, ONE)));
             addTrend(doubleNum(EMA), doubleNum(closePrice));
         }
-        EMAValue = EMA == null ? 0.0 : doubleNum(EMA);
     }
 
     @Override
