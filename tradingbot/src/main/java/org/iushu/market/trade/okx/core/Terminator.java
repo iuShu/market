@@ -108,7 +108,7 @@ public class Terminator implements ApplicationContextAware {
         JSONObject ticker = data.getJSONObject(0);
         double price = ticker.getDoubleValue("last");
         double tpPx = takeProfitPrice(firstPx.get(), orderContractSize, posSide, properties.getOrder());
-        if (!canTakeProfit(price, tpPx))
+        if (!canTakeProfit(tpPx, price))
             return;
 
         if (!restTemplate.closePosition(posSide)) {
