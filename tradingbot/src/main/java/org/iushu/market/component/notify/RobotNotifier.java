@@ -1,6 +1,7 @@
 package org.iushu.market.component.notify;
 
 import com.alibaba.fastjson2.JSONObject;
+import org.iushu.market.component.ProfileContext;
 import org.iushu.market.component.Signature;
 import org.iushu.market.config.TradingProperties;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -12,6 +13,8 @@ import java.util.Date;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.iushu.market.component.ProfileContext.TEST;
 
 @Component("robotNotifier")
 @ConditionalOnProperty(name = "trade.notify.robot")
@@ -88,7 +91,7 @@ public class RobotNotifier implements Notifier {
     }
 
     private String appendIndex(String content) {
-        return content + " [" + index.incrementAndGet() + "]";
+        return content + " [" + index.incrementAndGet() + "]" + (ProfileContext.isProfile(TEST) ? " test" : "");
     }
 
     private String appendPendingSize(String content) {

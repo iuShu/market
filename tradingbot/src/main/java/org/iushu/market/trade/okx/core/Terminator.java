@@ -2,6 +2,7 @@ package org.iushu.market.trade.okx.core;
 
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
+import org.iushu.market.component.ProfileContext;
 import org.iushu.market.config.TradingProperties;
 import org.iushu.market.trade.PosSide;
 import org.iushu.market.trade.okx.OkxRestTemplate;
@@ -11,7 +12,6 @@ import org.iushu.market.trade.okx.config.OkxComponent;
 import org.iushu.market.trade.okx.config.SubscribeChannel;
 import org.iushu.market.trade.okx.event.OrderClosedEvent;
 import org.iushu.market.trade.okx.event.OrderErrorEvent;
-import org.iushu.market.trade.okx.event.OrderFilledEvent;
 import org.iushu.market.trade.okx.event.OrderSuccessorEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,7 +22,6 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -31,6 +30,8 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.iushu.market.Constants.ORDER_STATE_FILLED;
 import static org.iushu.market.Constants.ORDER_STATE_LIVE;
+import static org.iushu.market.component.ProfileContext.PROD;
+import static org.iushu.market.component.ProfileContext.TEST;
 import static org.iushu.market.trade.MartinOrderUtils.takeProfitPrice;
 import static org.iushu.market.trade.okx.OkxConstants.*;
 
@@ -49,7 +50,6 @@ public class Terminator implements ApplicationContextAware {
     private volatile String messageId = "";
     private final AtomicReference<Double> firstPx = new AtomicReference<>(0.0);
     private final List<Double> prices = new CopyOnWriteArrayList<>();
-    private boolean test = true;
 
     public Terminator(TradingProperties properties, OkxRestTemplate restTemplate) {
         this.properties = properties;
@@ -64,9 +64,16 @@ public class Terminator implements ApplicationContextAware {
         String state = data.getString("state");
         String side = data.getString("side");
         PosSide posSide = PosSide.of(data.getString("posSide"));
+        int contractSize = data.getIntValue("sz", -1);
         orderStateMap.put(ordId, state);
+        orderContractSize = contractSize;
         if (!ORDER_STATE_FILLED.equals(state) || !posSide.closeSide().equals(side))
             return;
+
+        if (contractSize == properties.getOrder().getFirstContractSize()) {
+            this.posSide = posSide;
+            this.firstPx.set(data.getDoubleValue("avgPx"));
+        }
 
         cancelLiveOrders(session);
         firstPx.set(0.0);
@@ -75,23 +82,13 @@ public class Terminator implements ApplicationContextAware {
         eventPublisher.publishEvent(new OrderClosedEvent(data));
     }
 
-    // can be merged to onOrderClosed(..)
-    @EventListener(OrderFilledEvent.class)
-    public void recordOrderFilled(OrderFilledEvent event) {
-        JSONObject data = (JSONObject) event.getSource();
-        orderContractSize = data.getIntValue("sz", -1);
-        if (orderContractSize == properties.getOrder().getFirstContractSize()) {
-            posSide = PosSide.of(data.getString("posSide"));
-            firstPx.set(data.getDoubleValue("avgPx"));
-        }
-    }
-
     @EventListener(OrderSuccessorEvent.class)
     public void onOrderSuccessor(OrderSuccessorEvent event) {
         if (Successor.FIRST_ORDER.equals(event.getType())) {
             JSONObject filled = (JSONObject) event.getSource();
             posSide = PosSide.of(filled.getString("posSide"));
             firstPx.set(filled.getDoubleValue("avgPx"));
+            orderContractSize = filled.getIntValue("lastFillSz", -1);
         }
         else if (Successor.PENDING_ORDER.equals(event.getType())) {
             JSONArray orders = (JSONArray) event.getSource();
@@ -111,9 +108,7 @@ public class Terminator implements ApplicationContextAware {
         JSONObject ticker = data.getJSONObject(0);
         double price = ticker.getDoubleValue("last");
         double tpPx = takeProfitPrice(firstPx.get(), orderContractSize, posSide, properties.getOrder());
-        if (test && !tpCheckOnTest(price, tpPx))
-            return;
-        if (!test && !posSide.isProfit(tpPx, price))
+        if (!canTakeProfit(price, tpPx))
             return;
 
         if (!restTemplate.closePosition(posSide)) {
@@ -126,7 +121,10 @@ public class Terminator implements ApplicationContextAware {
         }
     }
 
-    private boolean tpCheckOnTest(double px, double tpPx) {
+    private boolean canTakeProfit(double tpPx, double px) {
+        if (ProfileContext.isProfile(PROD))
+            return posSide.isProfit(tpPx, px);
+
         if (prices.size() >= 5)
             prices.remove(0);
         prices.add(px);
@@ -177,6 +175,5 @@ public class Terminator implements ApplicationContextAware {
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.eventPublisher = applicationContext;
-        this.test = 1 == Arrays.stream(applicationContext.getEnvironment().getActiveProfiles()).filter(p -> p.equals("test")).count();
     }
 }

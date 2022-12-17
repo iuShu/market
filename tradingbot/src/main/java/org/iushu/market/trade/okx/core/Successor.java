@@ -43,16 +43,19 @@ public class Successor implements ApplicationContextAware {
             return;
         }
 
+        int lastFillSz = 0;
         for (int i = 0; i < orders.size(); i++) {
             JSONObject filled = orders.getJSONObject(i);
+            int contractSize = filled.getIntValue("sz", -1);
             double pnl = filled.getDoubleValue("pnl");
-            if (pnl == 0)
+            if (pnl == 0) {
+                lastFillSz = lastFillSz == 0 ? contractSize : lastFillSz;
                 continue;
+            }
             if (i == 0)
                 return;
 
             filled = orders.getJSONObject(i - 1);
-            int contractSize = filled.getIntValue("sz", -1);
             if (contractSize != properties.getOrder().getFirstContractSize()) {
                 String errMsg = "query first filled order but found " + contractSize;
                 logger.error(errMsg);
@@ -60,7 +63,8 @@ public class Successor implements ApplicationContextAware {
                 return;
             }
 
-            logger.info("successor found order {} {} {}", contractSize, filled.getString("avgPx"), filled.getString("posSide"));
+            filled.put("lastFillSz", lastFillSz);
+            logger.info("successor found order {}~{} {} {}", contractSize, lastFillSz, filled.getString("avgPx"), filled.getString("posSide"));
             eventPublisher.publishEvent(new OrderSuccessorEvent(FIRST_ORDER, filled));
             queryPendingOrders();
             queryPendingAlgo();

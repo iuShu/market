@@ -142,8 +142,12 @@ public class Initiator implements ApplicationContextAware {
 
     @EventListener(OrderSuccessorEvent.class)
     public void onOrderSuccessor(OrderSuccessorEvent event) {
-        if (existed.compareAndSet(false, true))
+        if (!event.getType().equals(Successor.FIRST_ORDER))
+            return;
+        if (!existed.compareAndSet(false, true)) {
             logger.error("successor processing failed");
+            eventPublisher.publishEvent(new OrderErrorEvent("Initiator process successor event error"));
+        }
     }
 
     @EventListener(OrderClosedEvent.class)

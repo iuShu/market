@@ -4,14 +4,12 @@ import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import org.apache.tomcat.util.buf.StringUtils;
 import org.iushu.market.Constants;
+import org.iushu.market.component.ProfileContext;
 import org.iushu.market.component.Signature;
 import org.iushu.market.config.TradingProperties;
 import org.iushu.market.trade.PosSide;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.BeansException;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -23,23 +21,22 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
 import static org.iushu.market.Constants.ALGO_PX_TYPE_LAST;
 import static org.iushu.market.Constants.ALGO_TYPE_OCO;
+import static org.iushu.market.component.ProfileContext.TEST;
 
 @Component
 @Profile(Constants.EXChANGE_OKX)
-public class OkxRestTemplate implements ApplicationContextAware {
+public class OkxRestTemplate {
 
     private static final Logger logger = LoggerFactory.getLogger(OkxRestTemplate.class);
 
     private final RestTemplate restTemplate;
     private final TradingProperties properties;
     private final TradingProperties.ApiInfo apiInfo;
-    private boolean test = true;
 
     public OkxRestTemplate(RestTemplate restTemplate, TradingProperties properties, TradingProperties.ApiInfo apiInfo) {
         this.restTemplate = restTemplate;
@@ -73,7 +70,7 @@ public class OkxRestTemplate implements ApplicationContextAware {
         headers.put("OK-ACCESS-KEY", Collections.singletonList(apiInfo.getApiKey()));
         headers.put("OK-ACCESS-PASSPHRASE", Collections.singletonList(apiInfo.getPassphrase()));
         headers.put("Content-Type", Collections.singletonList("application/json;charset=utf-8"));
-        if (test)
+        if (ProfileContext.isProfile(TEST))
             headers.put("x-simulated-trading", Collections.singletonList("1"));
         return headers;
     }
@@ -220,8 +217,4 @@ public class OkxRestTemplate implements ApplicationContextAware {
         return false;
     }
 
-    @Override
-    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-        test = 1 == Arrays.stream(applicationContext.getEnvironment().getActiveProfiles()).filter(p -> p.equals("test")).count();
-    }
 }
