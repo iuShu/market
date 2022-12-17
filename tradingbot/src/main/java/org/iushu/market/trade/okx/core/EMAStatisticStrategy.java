@@ -25,7 +25,7 @@ public class EMAStatisticStrategy extends EMAStrategy {
 
     private static final Logger logger = LoggerFactory.getLogger(EMAStatisticStrategy.class);
 
-    public static final int RANGE = 30;
+    public static final int RANGE = 50;
     private final LinkedList<PosSide> trends = new LinkedList<>();
 
     public EMAStatisticStrategy(OkxRestTemplate restTemplate) {

@@ -38,7 +38,6 @@ public class Tracker implements ApplicationContextAware {
     private volatile PosSide posSide = null;
     private final AtomicInteger idx = new AtomicInteger(0);
     private final AtomicBoolean processing = new AtomicBoolean(false);
-    private final AtomicInteger checker = new AtomicInteger(0);
 
     public Tracker(TradingProperties properties) {
         this.properties = properties;
@@ -57,7 +56,7 @@ public class Tracker implements ApplicationContextAware {
         double takeProfitPrice = takeProfitPrice(firstPx, cs, posSide, properties.getOrder());
         if (posSide.isLoss(nextOrderPrice, price))
             fillNextOrStopLoss(nextOrderPrice, price, cs);
-        if (posSide.isProfit(takeProfitPrice, price))
+        if (posSide != null && posSide.isProfit(takeProfitPrice, price))
             takeProfit(price);
     }
 
@@ -85,7 +84,8 @@ public class Tracker implements ApplicationContextAware {
         if (!processing.compareAndSet(false, true))
             return;
         try {
-            if (nextOrderPrice == stopLossPrice(firstPx, posSide, properties.getOrder())) {
+            double slPx = stopLossPrice(firstPx, posSide, properties.getOrder());
+            if (nextOrderPrice == slPx) {
                 firstPx = 0.0;
                 posSide = null;
                 idx.set(0);
@@ -100,6 +100,9 @@ public class Tracker implements ApplicationContextAware {
                 filled.put("accFillSz", orderContractSize);
                 filled.put("state", Constants.ORDER_STATE_FILLED);
                 filled.put("side", posSide.openSide());
+                filled.put("_ttlCs", totalContractSize(orderContractSize, properties.getOrder()));
+                filled.put("_tpPx", takeProfitPrice(firstPx, orderContractSize, posSide, properties.getOrder()));
+                filled.put("_slPx", slPx);
                 eventPublisher.publishEvent(new OrderFilledEvent(filled));
             }
         } catch (Exception e) {

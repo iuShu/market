@@ -28,8 +28,7 @@ import java.util.Date;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.iushu.market.trade.MartinOrderUtils.lastContractSize;
-import static org.iushu.market.trade.MartinOrderUtils.totalCost;
+import static org.iushu.market.trade.MartinOrderUtils.*;
 import static org.iushu.market.trade.okx.OkxConstants.CHANNEL_TICKERS;
 
 @OkxShadowComponent("shadowInitiator")
@@ -97,14 +96,18 @@ public class Initiator implements ApplicationContextAware {
         if (existed.get() || !existed.compareAndSet(false, true))
             return;
 
-        logger.info("sent first order {} {} {}", price, properties.getOrder().getFirstContractSize(), posSide.getName());
+        int sz = properties.getOrder().getFirstContractSize();
+        logger.info("sent first order {} {} {}", price, sz, posSide.getName());
 
-        JSONObject filled = JSONObject.of("sz", properties.getOrder().getFirstContractSize());
+        JSONObject filled = JSONObject.of("sz", sz);
         filled.put("avgPx", price);
         filled.put("posSide", posSide.getName());
-        filled.put("accFillSz", properties.getOrder().getFirstContractSize());
+        filled.put("accFillSz", sz);
         filled.put("state", Constants.ORDER_STATE_FILLED);
         filled.put("side", posSide.openSide());
+        filled.put("_ttlCs", sz);
+        filled.put("_tpPx", takeProfitPrice(price, sz, posSide, properties.getOrder()));
+        filled.put("_slPx", stopLossPrice(price, posSide, properties.getOrder()));
         eventPublisher.publishEvent(new OrderFilledEvent(filled));
     }
 
