@@ -4,6 +4,7 @@ import com.alibaba.fastjson2.JSONObject;
 import org.iushu.market.client.event.ChannelErrorEvent;
 import org.iushu.market.client.event.ChannelMessagingEvent;
 import org.iushu.market.client.event.ChannelOpenedEvent;
+import org.iushu.market.client.event.ChannelReconnectEvent;
 import org.iushu.market.config.WebSocketProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,6 +41,8 @@ public class ChannelWebSocketHandler implements WebSocketHandler, ApplicationCon
     @Override
     public void afterConnectionEstablished(WebSocketSession session) {
         logger.info("connect established {}", websocketUrl);
+        if (reconnectTimes != 0)
+            eventPublisher.publishEvent(new ChannelReconnectEvent<>(session, reconnectTimes));
         reconnectTimes = 0;
         this.session = session;
         this.eventPublisher.publishEvent(new ChannelOpenedEvent<>(this, session));

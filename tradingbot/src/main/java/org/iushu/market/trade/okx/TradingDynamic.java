@@ -4,6 +4,7 @@ import com.alibaba.fastjson2.JSONObject;
 import org.iushu.market.Constants;
 import org.iushu.market.client.event.ChannelClosedEvent;
 import org.iushu.market.client.event.ChannelErrorEvent;
+import org.iushu.market.client.event.ChannelReconnectEvent;
 import org.iushu.market.component.notify.Notifier;
 import org.iushu.market.trade.PosSide;
 import org.iushu.market.trade.okx.event.OrderClosedEvent;
@@ -76,6 +77,13 @@ public class TradingDynamic {
         int reconnectTimes = (int) event.getPayload();
         String template = "#### **Channel Error**\n----\n\nwebsocket try connect %d times\n\n----\n" + currentTime();
         notifier.notify("Channel Error", String.format(template, reconnectTimes));
+    }
+
+    @EventListener(ChannelReconnectEvent.class)
+    public void notifyChannelReconnect(ChannelReconnectEvent event) {
+        int reconnectTimes = (int) event.getPayload();
+        String template = "#### **Channel Reconnect**\n----\n\nwebsocket reconnected by trying %d times\n\n----\n" + currentTime();
+        notifier.notify("Channel Reconnect", String.format(template, reconnectTimes));
     }
 
     @EventListener(ChannelClosedEvent.class)
