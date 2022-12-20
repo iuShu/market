@@ -85,13 +85,13 @@ function timeDiff(start, end) {
         // + (seconds > 0 ? seconds + 's' : '')
 }
 
-function createDetail(o) {
+function createDetail(o, end) {
     const inner = innerDetail.replace('{{time}}', o.time.substring(11, 19))
         .replace('{{sz}}', o.sz + '')
         .replace('{{px}}', o.px)
         .replace('{{tpPx}}', o.tp)
         .replace('{{slPx}}', o.sl)
-        .replace('{{endIcon}}', o.tp === '' ? endIcon : '')
+        .replace('{{endIcon}}', end ? endIcon : '')
     return detail.replace('{{detail}}', inner)
 }
 
@@ -111,7 +111,7 @@ function createCard(mo) {
         .replace('{{pnl}}',  pnl + '')
     const details = []
     for (let o of mo.orders)
-        details.push(createDetail(o))
+        details.push(createDetail(o, mo.ttlSz === o.sz && mo.orders[mo.orders.length-1] === o))
     return card.replace('{{title}}', title)
         .replace('{{content}}', details.join(''))
         .replaceAll('{{collapseId}}', 'collapse' + collapseIdx.toString())
