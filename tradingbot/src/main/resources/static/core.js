@@ -216,7 +216,7 @@ const doAnalysis = function (event) {
         if (lever === 0 && line.indexOf('start trading for') > -1)
             lever = parseInt(line.substring(line.length-3, line.length-1))
 
-        if (line.indexOf('close by take profit at ') > -1) {    // shadow
+        if (line.indexOf('close by take profit at') > -1 || line.indexOf('order failed this round at') > -1) {    // shadow
             martinOrder.end = line.substring(0, 23)
             martinOrder.endPx = floatNum(line.substring(line.indexOf('at ')+3))
             martinOrder.ttlSz = sumSz(martinOrder)
