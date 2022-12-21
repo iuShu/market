@@ -7,10 +7,8 @@ import org.iushu.market.config.TradingProperties;
 import org.iushu.market.trade.PosSide;
 import org.iushu.market.trade.okx.config.OkxShadowComponent;
 import org.iushu.market.trade.okx.config.SubscribeChannel;
-import org.iushu.market.trade.okx.core.Successor;
 import org.iushu.market.trade.okx.event.OrderClosedEvent;
 import org.iushu.market.trade.okx.event.OrderFilledEvent;
-import org.iushu.market.trade.okx.event.OrderSuccessorEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
@@ -86,10 +84,7 @@ public class Tracker implements ApplicationContextAware {
         try {
             double slPx = stopLossPrice(firstPx, posSide, properties.getOrder());
             if (nextOrderPrice == slPx) {
-                firstPx = 0.0;
-                posSide = null;
-                idx.set(0);
-                eventPublisher.publishEvent(new OrderClosedEvent(price));
+                closeAllPosition(price);
                 logger.warn("order failed this round at {}", price);
             } else {
                 idx.incrementAndGet();
@@ -116,18 +111,26 @@ public class Tracker implements ApplicationContextAware {
         if (!processing.compareAndSet(false, true))
             return;
         try {
-            posSide = null;
-            firstPx = 0.0;
-            idx.set(0);
             logger.info("cancel algo orders");
             logger.info("close all follow orders");
-            eventPublisher.publishEvent(new OrderClosedEvent(price));
+            closeAllPosition(price);
             logger.info("close by take profit at {}", price);
         } catch (Exception e) {
             logger.error("take profit process error", e);
         } finally {
             processing.compareAndSet(true, false);
         }
+    }
+
+    private void closeAllPosition(double price) {
+        int cs = contractSize(idx.get(), properties.getOrder());
+        JSONObject data = JSONObject.of("fillSz", cs);
+        data.put("fillPx", price);
+        data.put("pnl", calcPnl(firstPx, cs, posSide, properties, price));
+        posSide = null;
+        firstPx = 0.0;
+        idx.set(0);
+        eventPublisher.publishEvent(new OrderClosedEvent(data));
     }
 
     private void placeFollowOrders(PosSide posSide) {

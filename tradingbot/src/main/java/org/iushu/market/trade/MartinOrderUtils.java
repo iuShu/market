@@ -1,6 +1,7 @@
 package org.iushu.market.trade;
 
 import org.iushu.market.config.OrderProperties;
+import org.iushu.market.config.TradingProperties;
 
 import java.math.BigDecimal;
 import java.util.Arrays;
@@ -119,6 +120,16 @@ public class MartinOrderUtils {
         double openFee = totalOpenFee(firstPx, orderContractSize, posSide, properties);
         double closeFee = totalCloseFee(firstPx, orderContractSize, posSide, properties);
         return doubleNum(add(add(div(totalValue, decimal(lever)), decimal(openFee)), decimal(closeFee)));
+    }
+
+    public static double calcPnl(double firstPx, int orderContractSize, PosSide posSide, TradingProperties properties, double endPx) {
+        double avgPx = averagePrice(firstPx, orderContractSize, posSide, properties.getOrder());
+        BigDecimal avgPxDecimal = decimal(avgPx), leverDecimal = decimal(properties.getLever());
+        BigDecimal pnlRate = posSide == PosSide.LongSide ? mlt(div(sub(endPx, avgPx), avgPxDecimal), leverDecimal)
+                : mlt(div(sub(avgPx, endPx), avgPxDecimal), leverDecimal);
+        BigDecimal faceValueDecimal = decimal(properties.getOrder().getFaceValue());
+        BigDecimal avgValue = div(mlt(avgPx, totalContractSize(orderContractSize, properties.getOrder())), leverDecimal);
+        return doubleNum(mlt(mlt(avgValue, faceValueDecimal), pnlRate));
     }
 
     public static void main(String[] args) {
