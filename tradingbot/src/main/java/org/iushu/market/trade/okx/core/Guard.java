@@ -116,6 +116,7 @@ public class Guard implements ApplicationContextAware {
         if (Successor.ALGO_ORDER.equals(event.getType())) {
             JSONObject algo = (JSONObject) event.getSource();
             algoId = algo.getString("algoId");
+            algoSz = algo.getIntValue("sz");
         }
         else if (Successor.FIRST_ORDER.equals(event.getType())) {
             JSONObject filled = (JSONObject) event.getSource();
