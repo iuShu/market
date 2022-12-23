@@ -6,6 +6,7 @@ import org.iushu.market.trade.PosSide;
 import org.iushu.market.trade.okx.OkxRestTemplate;
 import org.iushu.market.trade.okx.config.OkxComponent;
 import org.iushu.market.trade.okx.config.SubscribeChannel;
+import org.iushu.market.trade.okx.event.OperationFailedEvent;
 import org.iushu.market.trade.okx.event.OrderClosedEvent;
 import org.iushu.market.trade.okx.event.OrderFilledEvent;
 import org.iushu.market.trade.okx.event.OrderSuccessorEvent;
@@ -16,6 +17,9 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
+
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import static org.iushu.market.Constants.ORDER_STATE_FILLED;
 import static org.iushu.market.trade.MartinOrderUtils.*;
@@ -32,6 +36,8 @@ public class Guard implements ApplicationContextAware {
 
     private volatile double firstPx = 0.0;
     private volatile String algoId = "";
+    private volatile int algoSz = 0;
+    private final Lock lock = new ReentrantLock();
 
     public Guard(TradingProperties properties, OkxRestTemplate restTemplate) {
         this.properties = properties;
@@ -61,14 +67,20 @@ public class Guard implements ApplicationContextAware {
         data.put("_tpPx", takeProfitPrice(firstPx, contractSize, posSide, properties.getOrder()));
         data.put("_slPx", stopLossPrice(firstPx, posSide, properties.getOrder()));
         eventPublisher.publishEvent(new OrderFilledEvent(data));
-        placeAlgoOrder(data, contractSize, posSide);
+
+        lock.lock();
+        try {
+            placeAlgoOrder(data, contractSize, posSide);
+        } finally {
+            lock.unlock();
+        }
     }
 
     private void placeAlgoOrder(JSONObject data, double px, PosSide posSide) {
-        if (algoId.length() > 0 && !cancelPreviousAlgo())
+        int ttlCs = data.getIntValue("_ttlCs", -1);
+        if (algoSz > ttlCs || (algoId.length() > 0 && !cancelPreviousAlgo()))
             return;
 
-        int ttlCs = data.getIntValue("_ttlCs", -1);
         double tpPx = data.getDoubleValue("_tpPx");
         double slPx = data.getDoubleValue("_slPx");
         JSONObject response = restTemplate.placeAlgoOrder(posSide, posSide.closeSide(), ttlCs, tpPx, slPx);
@@ -76,13 +88,14 @@ public class Guard implements ApplicationContextAware {
             response = restTemplate.placeAlgoOrder(posSide, posSide.closeSide(), ttlCs, tpPx, slPx);
         if (!response.isEmpty()) {
             algoId = response.getString("algoId");
+            algoSz = ttlCs;
             logger.info("placed algo {} tp={} sl={} {}", ttlCs, tpPx, slPx, algoId);
             return;
         }
 
         String errMsg = String.format("place algo failed for %s", px);
         logger.warn(errMsg);
-//        eventPublisher.publishEvent(new OrderErrorEvent(errMsg));
+        eventPublisher.publishEvent(new OperationFailedEvent(errMsg));
     }
 
     private boolean cancelPreviousAlgo() {
@@ -94,7 +107,7 @@ public class Guard implements ApplicationContextAware {
 
         String errMsg = String.format("cancel previous algo failed %s", algoId);
         logger.warn(errMsg);
-//        eventPublisher.publishEvent(new OrderErrorEvent(errMsg));
+        eventPublisher.publishEvent(new OperationFailedEvent(errMsg));
         return false;
     }
 
@@ -113,6 +126,7 @@ public class Guard implements ApplicationContextAware {
     @EventListener(OrderClosedEvent.class)
     public void onOrderClosed() {
         algoId = "";
+        algoSz = 0;
         firstPx = 0.0;
     }
 

@@ -9,6 +9,7 @@ import org.iushu.market.trade.okx.OkxWebSocketSession;
 import org.iushu.market.trade.okx.PacketUtils;
 import org.iushu.market.trade.okx.config.OkxComponent;
 import org.iushu.market.trade.okx.config.SubscribeChannel;
+import org.iushu.market.trade.okx.event.OperationFailedEvent;
 import org.iushu.market.trade.okx.event.OrderErrorEvent;
 import org.iushu.market.trade.okx.event.OrderSuccessorEvent;
 import org.slf4j.Logger;
@@ -93,8 +94,11 @@ public class Tracker implements ApplicationContextAware {
         double extraMargin = properties.getOrder().getExtraMargin();
         if (restTemplate.addExtraMargin(posSide, extraMargin))
             logger.info("add extra margin {} success", extraMargin);
-        else
-            logger.warn("add extra margin {} failed", extraMargin);
+        else {
+            String errMsg = String.format("add extra margin %s failed", extraMargin);
+            logger.warn(errMsg);
+            eventPublisher.publishEvent(new OperationFailedEvent(errMsg));
+        }
     }
 
     @SubscribeChannel(op = OP_BATCH_ORDERS)

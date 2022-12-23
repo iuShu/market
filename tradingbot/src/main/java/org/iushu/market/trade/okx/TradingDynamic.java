@@ -7,10 +7,7 @@ import org.iushu.market.client.event.ChannelErrorEvent;
 import org.iushu.market.client.event.ChannelReconnectEvent;
 import org.iushu.market.component.notify.Notifier;
 import org.iushu.market.trade.PosSide;
-import org.iushu.market.trade.okx.event.OrderClosedEvent;
-import org.iushu.market.trade.okx.event.OrderErrorEvent;
-import org.iushu.market.trade.okx.event.OrderFilledEvent;
-import org.iushu.market.trade.okx.event.TradingStopEvent;
+import org.iushu.market.trade.okx.event.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Profile;
@@ -62,6 +59,12 @@ public class TradingDynamic {
                 String.format("closed at %s %s\n\n", data.getString("fillSz"), data.getString("fillPx")) +
                 "pnl " + data.getString("pnl") + "\n\n----\n" + currentTime();
         notifier.notify("Order Closed", template);
+    }
+
+    @EventListener(OperationFailedEvent.class)
+    public void notifyOperationFailed(OperationFailedEvent event) {
+        String template = "#### **Order Error**\n----\n\n%s\n\n----\n" + currentTime();
+        notifier.notify("Order Error", String.format(template, event.getSource().toString()));
     }
 
     @EventListener(OrderErrorEvent.class)
