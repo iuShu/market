@@ -77,7 +77,7 @@
   </dependencies>
 
   <build>
-    <finalName>tradingbot-test</finalName>
+    <finalName>tradingbot-shadow</finalName>
     <plugins>
       <plugin>
         <groupId>org.springframework.boot</groupId>

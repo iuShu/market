@@ -133,17 +133,17 @@ public class MartinOrderUtils {
     }
 
     public static void main(String[] args) {
-        List<Integer> contractSizes = Arrays.asList(10, 20, 40, 80, 160, 320, 640, 1280);
+        List<Integer> contractSizes = Arrays.asList(1, 2, 4, 8, 16, 32, 64, 128);
 
         OrderProperties orderProperties = new OrderProperties();
         orderProperties.setContractIncrementRate(2);
-        orderProperties.setFirstContractSize(10);
+        orderProperties.setFirstContractSize(1);
         orderProperties.setMaxOrder(8);
-        orderProperties.setFaceValue(0.001);
+        orderProperties.setFaceValue(0.01);
         orderProperties.setMakerFeeRate(0.0005);
         orderProperties.setTakerFeeRate(0.0002);
         orderProperties.setFollowRates(Arrays.asList(0.006, 0.012, 0.018, 0.024, 0.03, 0.036, 0.042, 0.048));
-        orderProperties.setPullbackRates(Arrays.asList(0.006, 0.006, 0.006, 0.006, 0.006, 0.006, 0.006, 0.006));
+        orderProperties.setPullbackRates(Arrays.asList(0.006, 0.006, 0.006, 0.006, 0.006, 0.003, 0.002, 0.001));
 
 //        contractSizes.forEach(cs -> System.out.println(cs + " " + orderIndex(cs, orderProperties)));
 

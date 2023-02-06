@@ -28,8 +28,8 @@ trade:
   stopFile: /opt/trading/stop-shadow
 
   order:
-    faceValue: 0.001
-    firstContractSize: 10
+    faceValue: 0.01
+    firstContractSize: 1
     contractIncrementRate: 2
     maxOrder: 8
     extraMargin: 50
@@ -48,15 +48,15 @@ trade:
       - 0.006
       - 0.006
       - 0.006
-      - 0.006
-      - 0.006
-      - 0.006
+      - 0.003
+      - 0.002
+      - 0.001
     makerFeeRate: 0.0005
     takerFeeRate: 0.0002
 
   notify:
     windows: false
-    robot: false
+    robot: true
     webhook:
     secret:
     rateLimited: 20

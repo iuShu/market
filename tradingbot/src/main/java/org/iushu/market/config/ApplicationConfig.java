@@ -8,8 +8,12 @@ import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.ssl.SSLContexts;
 import org.iushu.market.Constants;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.task.TaskExecutorBuilder;
+import org.springframework.boot.task.TaskExecutorCustomizer;
 import org.springframework.boot.task.TaskSchedulerBuilder;
+import org.springframework.boot.task.TaskSchedulerCustomizer;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
@@ -39,15 +43,19 @@ import static org.springframework.context.support.AbstractApplicationContext.APP
 @Configuration
 public class ApplicationConfig {
 
+    private static final Logger logger = LoggerFactory.getLogger(ApplicationConfig.class);
+
     @Bean
     @Primary
     public TaskExecutor taskExecutor(TaskExecutorBuilder builder) {
-        return builder.corePoolSize(Runtime.getRuntime().availableProcessors() + 1).build();
+        TaskExecutorCustomizer customizer = (executor) -> executor.setRejectedExecutionHandler((r, e) -> logger.warn("executor rejected task {}", r));
+        return builder.corePoolSize(Runtime.getRuntime().availableProcessors() + 1).customizers(customizer).build();
     }
 
     @Bean
     public TaskScheduler taskScheduler(TaskSchedulerBuilder builder) {
-        return builder.build();
+        TaskSchedulerCustomizer customizer = (executor) -> executor.setRejectedExecutionHandler((r, e) -> logger.warn("scheduler rejected task {}", r));
+        return builder.customizers(customizer).build();
     }
 
     @Bean

@@ -3,8 +3,8 @@
     <Properties>
         <Property name="pattern">%d{yyyy-MM-dd HH:mm:ss.SSS} [%t{12}] %-5level %c{1.}: %m\n</Property>
         <Property name="pattern2">[%-5level] %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} - %msg%n</Property>
-        <Property name="filename">logs/trading.log</Property>
-        <Property name="rolling">logs/archive/trader.log.%d{yyyy-MM-dd-hh-mm}.gz</Property>
+        <Property name="filename">logs/shadow.log</Property>
+        <Property name="rolling">logs/archive/shadow.log.%d{yyyy-MM-dd-hh-mm}.gz</Property>
     </Properties>
     <Appenders>
         <!--<RandomAccessFile name="file" fileName="${filename}" immediateFlush="false" append="true">
@@ -13,7 +13,7 @@
         <RollingRandomAccessFile name="file" fileName="${filename}" filePattern="${rolling}" append="true">
             <PatternLayout pattern="${pattern}"/>
             <Policies>
-                <SizeBasedTriggeringPolicy size="20 MB"/>
+                <SizeBasedTriggeringPolicy size="10 MB"/>
             </Policies>
             <DefaultRolloverStrategy max="30"/>
         </RollingRandomAccessFile>

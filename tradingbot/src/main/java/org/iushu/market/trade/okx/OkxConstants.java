@@ -9,8 +9,8 @@ import java.util.Set;
 public interface OkxConstants {
 
     int SUCCESS = 0;
-    int CANDLE_PERIOD_MILLISECONDS = 60000;
-    String CANDLE_BAR = Constants.CANDLE_TYPE_1M;
+    int CANDLE_PERIOD_MILLISECONDS = 60000 * 15;
+    String CANDLE_BAR = Constants.CANDLE_TYPE_15M;
 
     String OP_LOGIN = "login";
     String OP_ORDER = "order";

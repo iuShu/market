@@ -25,7 +25,7 @@ public class EMAStatisticStrategy extends EMAStrategy {
 
     private static final Logger logger = LoggerFactory.getLogger(EMAStatisticStrategy.class);
 
-    public static final int RANGE = 50;
+    public static final int RANGE = 3;
     private final LinkedList<PosSide> trends = new LinkedList<>();
 
     public EMAStatisticStrategy(OkxRestTemplate restTemplate) {
@@ -45,14 +45,12 @@ public class EMAStatisticStrategy extends EMAStrategy {
         }
 
         List<PosSide> temp = new ArrayList<>(trends.subList(0, RANGE));
-        double currentEma = calculateByPrevious(price);
-        temp.add(0, determine(currentEma, price));
+//        double currentEma = calculateByPrevious(price);
+//        temp.add(0, determine(currentEma, price));
         long longCount = 0, shortCount = 0;
         for (PosSide posSide : temp) {
-            if (posSide == PosSide.LongSide)
-                longCount++;
-            else
-                shortCount++;
+            longCount += posSide == PosSide.LongSide ? 1 : 0;
+            shortCount += posSide == PosSide.ShortSide ? 1 : 0;
         }
         logger.info("trend statistics long={} short={}", longCount, shortCount);
         return longCount > shortCount ? PosSide.LongSide : PosSide.ShortSide;
