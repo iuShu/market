@@ -26,6 +26,8 @@ trade:
   tdMode: isolated
   lever: 60
   stopFile: /opt/trading/stop-shadow
+  longFile: /opt/trading/side-long
+  shortFile: /opt/trading/side-short
 
   order:
     faceValue: 0.01

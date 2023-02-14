@@ -4,6 +4,7 @@ import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import org.iushu.market.Constants;
 import org.iushu.market.config.TradingProperties;
+import org.iushu.market.trade.FileSignal;
 import org.iushu.market.trade.PosSide;
 import org.iushu.market.trade.okx.OkxRestTemplate;
 import org.iushu.market.trade.okx.OkxWebSocketSession;
@@ -40,19 +41,19 @@ public class Initiator implements ApplicationContextAware {
     private final TradingProperties properties;
     private ApplicationEventPublisher eventPublisher;
     private final TaskScheduler taskScheduler;
-    private final File stopFile;
+    private final FileSignal fileSignal;
 
     private final Strategy<Double> strategy;
     private volatile double balance = 0.0;
     private final AtomicBoolean existed = new AtomicBoolean(false);
     private final AtomicInteger batch = new AtomicInteger(1);
 
-    public Initiator(Strategy<Double> strategy, OkxRestTemplate restTemplate, TradingProperties properties, TaskScheduler taskScheduler) {
+    public Initiator(Strategy<Double> strategy, OkxRestTemplate restTemplate, TradingProperties properties, TaskScheduler taskScheduler, FileSignal fileSignal) {
         this.strategy = strategy;
         this.restTemplate = restTemplate;
         this.properties = properties;
         this.taskScheduler = taskScheduler;
-        this.stopFile = new File(properties.getStopFile());
+        this.fileSignal = fileSignal;
     }
 
     @EventListener(ContextRefreshedEvent.class)
@@ -86,7 +87,9 @@ public class Initiator implements ApplicationContextAware {
         JSONArray data = message.getJSONArray("data");
         JSONObject ticker = data.getJSONObject(0);
         double price = ticker.getDoubleValue("last");
-        PosSide posSide = strategy.trend(price);
+
+        PosSide posSide = fileSignal.manualSide();
+        posSide = posSide == null ? strategy.trend(price) : posSide;
         if (posSide == null)
             return;
 
@@ -115,12 +118,12 @@ public class Initiator implements ApplicationContextAware {
     public void onOrderClose(OrderClosedEvent event) {
         refreshAccountBalance();
         logger.info("{} batch order closed, balance {}, ready to next round", batch.getAndIncrement(), balance);
-        if (!stopFile.exists()) {
+        if (!fileSignal.isStop()) {
             taskScheduler.schedule(() -> existed.compareAndSet(true, false), new Date(System.currentTimeMillis() + 5000));
             return;
         }
 
-        logger.info("found stop signal at {}, system exit", stopFile.getPath());
+        logger.info("found stop signal, system exit");
         eventPublisher.publishEvent(TradingStopEvent.event());
     }
 

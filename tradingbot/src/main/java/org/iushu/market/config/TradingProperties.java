@@ -19,6 +19,8 @@ public class TradingProperties {
     private int lever;
     private long heartbeatPeriod = 10000;   // millisecond
     private String stopFile;
+    private String longFile;
+    private String shortFile;
 
     private final TradingProperties.Notify notify = new TradingProperties.Notify();
     private final TradingProperties.Okx okx = new TradingProperties.Okx();
@@ -331,5 +333,21 @@ public class TradingProperties {
 
     public OrderProperties getOrder() {
         return order;
+    }
+
+    public String getLongFile() {
+        return longFile;
+    }
+
+    public void setLongFile(String longFile) {
+        this.longFile = longFile;
+    }
+
+    public String getShortFile() {
+        return shortFile;
+    }
+
+    public void setShortFile(String shortFile) {
+        this.shortFile = shortFile;
     }
 }

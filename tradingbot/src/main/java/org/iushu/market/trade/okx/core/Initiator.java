@@ -3,6 +3,7 @@ package org.iushu.market.trade.okx.core;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import org.iushu.market.config.TradingProperties;
+import org.iushu.market.trade.FileSignal;
 import org.iushu.market.trade.PosSide;
 import org.iushu.market.trade.okx.*;
 import org.iushu.market.trade.okx.config.OkxComponent;
@@ -21,7 +22,6 @@ import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.TaskScheduler;
 
-import java.io.File;
 import java.util.Date;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -41,7 +41,7 @@ public class Initiator implements ApplicationContextAware {
     private ApplicationEventPublisher eventPublisher;
     private final TaskScheduler taskScheduler;
     private final Strategy<Double> strategy;
-    private final File stopFile;
+    private final FileSignal fileSignal;
 
     private volatile double balance = 0.0;
     private volatile String messageId = "";
@@ -49,12 +49,12 @@ public class Initiator implements ApplicationContextAware {
     private final AtomicInteger failure = new AtomicInteger(5);
     private final AtomicInteger batch = new AtomicInteger(1);
 
-    public Initiator(Strategy<Double> strategy, OkxRestTemplate restTemplate, TradingProperties properties, TaskScheduler taskScheduler) {
+    public Initiator(Strategy<Double> strategy, OkxRestTemplate restTemplate, TradingProperties properties, TaskScheduler taskScheduler, FileSignal fileSignal) {
         this.strategy = strategy;
         this.restTemplate = restTemplate;
         this.properties = properties;
         this.taskScheduler = taskScheduler;
-        this.stopFile = new File(properties.getStopFile());
+        this.fileSignal = fileSignal;
     }
 
     @EventListener(ContextRefreshedEvent.class)
@@ -88,7 +88,9 @@ public class Initiator implements ApplicationContextAware {
         JSONArray data = message.getJSONArray("data");
         JSONObject ticker = data.getJSONObject(0);
         double price = ticker.getDoubleValue("last");
-        PosSide posSide = strategy.trend(price);
+
+        PosSide posSide = fileSignal.manualSide();
+        posSide = posSide == null ? strategy.trend(price) : posSide;
         if (posSide == null)
             return;
 
@@ -157,12 +159,12 @@ public class Initiator implements ApplicationContextAware {
         String pnl = data.getString("pnl");
 //        logger.info("closed by take profit at {}", data.getDoubleValue("px"));
         logger.info("{} batch order closed, balance {} {}, ready to next round", batch.getAndIncrement(), balance, pnl);
-        if (!stopFile.exists()) {
+        if (!fileSignal.isStop()) {
             taskScheduler.schedule(() -> existed.compareAndSet(true, false), new Date(System.currentTimeMillis() + 5000));
             return;
         }
 
-        logger.info("found stop signal at {}, system exit", stopFile.getPath());
+        logger.info("found stop signal, system exit");
         eventPublisher.publishEvent(TradingStopEvent.event());
     }
 
