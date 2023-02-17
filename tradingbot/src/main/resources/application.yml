@@ -33,17 +33,15 @@ trade:
     faceValue: 0.01
     firstContractSize: 1
     contractIncrementRate: 2
-    maxOrder: 8
-    extraMargin: 50
+    maxOrder: 6
+    extraMargin: 0
     followRates:
       - 0.006
       - 0.012
       - 0.018
       - 0.024
       - 0.030
-      - 0.036
-      - 0.042
-      - 0.048
+      - 0.032
     pullbackRates:
       - 0.006
       - 0.006
@@ -51,8 +49,6 @@ trade:
       - 0.006
       - 0.006
       - 0.003
-      - 0.002
-      - 0.001
     makerFeeRate: 0.0005
     takerFeeRate: 0.0002
 

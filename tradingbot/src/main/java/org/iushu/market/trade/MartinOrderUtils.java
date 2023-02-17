@@ -72,17 +72,24 @@ public class MartinOrderUtils {
         return doubleNum(totalFee);
     }
 
-    private static double totalCloseFee(double firstPx, int orderContractSize, PosSide posSide, OrderProperties properties) {
+    private static double closeFee(double firstPx, int orderContractSize, PosSide posSide, OrderProperties properties) {
         int idx = orderIndex(orderContractSize, properties);
-        BigDecimal totalFee = ZERO, px;
-        for (int i = 0; i <= idx; i++) {
-            int cs = contractSize(i, properties);
-            int ttlCs = totalContractSize(cs, properties);
-            px = decimal(takeProfitPrice(firstPx, cs, posSide, properties));
-            BigDecimal fee = mlt(mlt(px, mlt(decimal(ttlCs), decimal(properties.getFaceValue()))), decimal(properties.getMakerFeeRate()));
-            totalFee = add(totalFee, fee);
-        }
-        return doubleNum(totalFee);
+        int cs = contractSize(idx, properties);
+        int ttlCs = totalContractSize(cs, properties);
+        BigDecimal px = decimal(takeProfitPrice(firstPx, cs, posSide, properties));
+        BigDecimal fee = mlt(mlt(px, mlt(decimal(ttlCs), decimal(properties.getFaceValue()))), decimal(properties.getMakerFeeRate()));
+        return doubleNum(fee);
+    }
+
+    private static double lossCloseFee(double firstPx, PosSide posSide, int lever, OrderProperties properties) {
+        double lossPx = stopLossPrice(firstPx, posSide, properties);
+        double avgPx = averagePrice(firstPx, lastContractSize(properties), posSide, properties);
+        BigDecimal lv = decimal(lever);
+        BigDecimal remainRate = posSide == PosSide.LongSide ? sub(avgPx, lossPx) : sub(lossPx, avgPx);
+        remainRate = sub(ONE, mlt(div(remainRate, decimal(avgPx)), lv));
+        BigDecimal totalContractSize = mlt(totalContractSize(lastContractSize(properties), properties), properties.getFaceValue());
+        BigDecimal lastActualAvgVal = div(mlt(decimal(avgPx), totalContractSize), lv);
+        return doubleNum(mlt(mlt(mlt(lastActualAvgVal, remainRate), lv), decimal(properties.getMakerFeeRate())));
     }
 
     public static int lastContractSize(OrderProperties properties) {
@@ -118,7 +125,7 @@ public class MartinOrderUtils {
             px = decimal(nextOrderPrice(firstPx, cs, posSide, properties));
         }
         double openFee = totalOpenFee(firstPx, orderContractSize, posSide, properties);
-        double closeFee = totalCloseFee(firstPx, orderContractSize, posSide, properties);
+        double closeFee = lossCloseFee(firstPx, posSide, lever, properties);
         return doubleNum(add(add(div(totalValue, decimal(lever)), decimal(openFee)), decimal(closeFee)));
     }
 
@@ -133,42 +140,48 @@ public class MartinOrderUtils {
     }
 
     public static void main(String[] args) {
-        List<Integer> contractSizes = Arrays.asList(1, 2, 4, 8, 16, 32, 64, 128);
+//        List<Integer> contractSizes = Arrays.asList(1, 2, 4, 8, 16, 32, 64, 128);
+        List<Integer> contractSizes = Arrays.asList(1, 2, 4, 8, 16, 32);
 
         OrderProperties orderProperties = new OrderProperties();
         orderProperties.setContractIncrementRate(2);
         orderProperties.setFirstContractSize(1);
-        orderProperties.setMaxOrder(8);
+        orderProperties.setMaxOrder(contractSizes.size());
         orderProperties.setFaceValue(0.01);
         orderProperties.setMakerFeeRate(0.0005);
         orderProperties.setTakerFeeRate(0.0002);
-        orderProperties.setFollowRates(Arrays.asList(0.006, 0.012, 0.018, 0.024, 0.03, 0.036, 0.042, 0.048));
-        orderProperties.setPullbackRates(Arrays.asList(0.006, 0.006, 0.006, 0.006, 0.006, 0.003, 0.002, 0.001));
+        orderProperties.setFollowRates(Arrays.asList(0.006, 0.012, 0.018, 0.024, 0.030, 0.032));
+        orderProperties.setPullbackRates(Arrays.asList(0.006, 0.006, 0.006, 0.006, 0.006, 0.003));
+
+        int lever = 60;
+        double price = 24904.8;
 
 //        contractSizes.forEach(cs -> System.out.println(cs + " " + orderIndex(cs, orderProperties)));
 
-//        for (int i = 0; i < 8; i++)
+//        for (int i = 0; i < contractSizes.size(); i++)
 //            System.out.println(i + " " + contractSize(i, orderProperties));
 
-//        contractSizes.forEach(cs -> System.out.println(cs + " " + nextOrderPrice(16646.5, cs, PosSide.LongSide, orderProperties)));
+//        contractSizes.forEach(cs -> System.out.println(cs + " " + nextOrderPrice(price, cs, PosSide.LongSide, orderProperties)));
 
 //        contractSizes.forEach(cs -> System.out.println(cs + " " + totalContractSize(cs, orderProperties)));
 
-//        contractSizes.forEach(cs -> System.out.println(cs + " " + averagePrice(16646.5, cs, PosSide.LongSide, orderProperties)));
+//        contractSizes.forEach(cs -> System.out.println(cs + " " + averagePrice(price, cs, PosSide.LongSide, orderProperties)));
 
-//        contractSizes.forEach(cs -> System.out.println(cs + " " + takeProfitPrice(16646.5, cs, PosSide.LongSide, orderProperties)));
+//        contractSizes.forEach(cs -> System.out.println(cs + " " + takeProfitPrice(price, cs, PosSide.LongSide, orderProperties)));
 
-//        System.out.println(stopLossPrice(16646.5, PosSide.LongSide, orderProperties));
+//        System.out.println(stopLossPrice(price, PosSide.LongSide, orderProperties));
 
-//        contractSizes.forEach(cs -> System.out.println(cs + " " + totalOpenFee(16646.5, cs, PosSide.LongSide, orderProperties)));
+//        contractSizes.forEach(cs -> System.out.println(cs + " " + totalOpenFee(price, cs, PosSide.LongSide, orderProperties)));
 
-//        contractSizes.forEach(cs -> System.out.println(cs + " " + totalCloseFee(16646.5, cs, PosSide.LongSide, orderProperties)));
+//        System.out.println(lossCloseFee(price, PosSide.LongSide, lever, orderProperties));
 
-//        contractSizes.forEach(cs -> System.out.println(cs + " " + totalCost(16646.5, cs, PosSide.LongSide, 80, orderProperties)));
+//        contractSizes.forEach(cs -> System.out.println(cs + " " + closeFee(price, cs, PosSide.LongSide, orderProperties)));
+
+//        contractSizes.forEach(cs -> System.out.println(cs + " " + totalCost(price, cs, PosSide.LongSide, lever, orderProperties)));
 
 //        for (int i = 0; i < orderProperties.getMaxOrder() - 1; i++) {
 //            int cs = contractSize(i, orderProperties);
-//            double nextOrderPrice = nextOrderPrice(16646.5, cs, PosSide.LongSide, orderProperties);
+//            double nextOrderPrice = nextOrderPrice(price, cs, PosSide.LongSide, orderProperties);
 //            System.out.println(nextContractSize(cs, orderProperties) + " " + nextOrderPrice);
 //        }
 

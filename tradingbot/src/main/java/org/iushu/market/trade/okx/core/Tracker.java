@@ -92,6 +92,9 @@ public class Tracker implements ApplicationContextAware {
 
     private void addMarginBalance(PosSide posSide) {
         double extraMargin = properties.getOrder().getExtraMargin();
+        if (extraMargin <= 0)
+            return;
+
         if (restTemplate.addExtraMargin(posSide, extraMargin))
             logger.info("add extra margin {} success", extraMargin);
         else {
