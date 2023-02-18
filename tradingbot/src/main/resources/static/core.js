@@ -139,7 +139,7 @@ function createCard(mo) {
         .replace('{{pnl}}',  pnl + '')
     const details = []
     for (let o of mo.orders)
-        details.push(createDetail(o, mo.ttlSz === o.sz && mo.orders[mo.orders.length-1] === o))
+        details.push(createDetail(o, mo.orders.length > 1 && mo.ttlSz === o.sz && mo.orders[mo.orders.length-1] === o))
     return card.replace('{{title}}', title)
         .replace('{{content}}', details.join(''))
         .replaceAll('{{collapseId}}', 'collapse' + collapseIdx.toString())
