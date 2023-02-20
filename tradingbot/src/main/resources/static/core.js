@@ -154,7 +154,7 @@ function createCard(mo) {
         .replaceAll('{{headingId}}', 'heading' + headingIdx.toString())
 }
 
-function createHeadCard(dmo) {
+function createHeadCard(dmo, is_dashboard) {
     let long = 0, short = 0, pnl = 0, date = '', end = '', day = 0, night = 0
     for (let mo of dmo) {
         if (date === '')
@@ -176,7 +176,7 @@ function createHeadCard(dmo) {
         if (pnl === prev)
             end = runningIcon
     }
-    return headCard.replace('{{date}}', date)
+    return headCard.replace('{{date}}', is_dashboard ? '<b>Dashboard</b>' : date)
         .replace('{{ttl}}', (long + short) + '')
         .replace('{{long}}', long + '')
         .replace('{{short}}', short + '')
@@ -211,7 +211,7 @@ function displayAccordion(mos) {
     }
 
     // accordions.unshift('<hr/>')
-    accordions.unshift(accordion.replace('{{body}}', createHeadCard(mos)))
+    accordions.unshift(accordion.replace('{{body}}', createHeadCard(mos, true)))
     const $board = $('#board')
     $board.empty()
     $board.append(accordions.join(''))
