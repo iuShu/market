@@ -47,7 +47,7 @@ const innerDetail = '<div class="row" style="width: 100%">' +
 const accordion = '<div class="accordion mt-3">{{body}}</div>'
 const headCard = '<div class="accordion-item shadow">' +
     '<h2 class="accordion-header" id="heading6">' +
-    '<button class="accordion-button collapsed" type="button"  data-bs-toggle="collapse" data-bs-target="#collapse" aria-expanded="false" aria-controls="collapse" style="background-color: #e9ecef">' +
+    '<button class="accordion-button collapsed" type="button"  data-bs-toggle="collapse" data-bs-target="#collapse" aria-expanded="false" aria-controls="collapse" style="background-color: #e9ecef; cursor: default">' +
     '<div class="row" style="width: 100%;">' +
     '<div class="col-2 align-self-center">{{date}}</div>' +
     '<div class="col-4">' +
@@ -60,10 +60,17 @@ const headCard = '<div class="accordion-item shadow">' +
     '</div>' +
     // '<div class="col-2"><b class="pe-2" style="color: {{color}}">PNL {{pnl}}</b>{{end}}</div>' +
     '<div class="col-2"><span class="badge rounded-pill text-bg-{{color}} ms-3" style="font-size: 14px">PNL {{pnl}}</span></div>' +
-    // '<div class="col-2">' +
-    // '   <span class="badge rounded-pill text-bg-light" title="Day 8:00 ~ 21:00">' + sun_icon + ' {{day}}</span>' +
-    // '   <span class="badge rounded-pill text-bg-dark ms-3" title="Night 21:00 ~ 8:00">' + moon_icon + ' {{night}}</span>' +
-    // '</div>' +
+    '<div class="col-4 pt-1" {{progress}}>' +
+    '  <div class="progress" role="progressbar" aria-label="pos stat" aria-valuemin="0" aria-valuemax="100" style="width: 90%" data-bs-toggle="tooltip" data-bs-html="true" title="{{title}}">' +
+    // '    <div class="progress-bar" style="width: 35%; background-color: #479f76"></div>' +
+    // '    <div class="progress-bar" style="width: 15%; background-color: #75b798"></div>' +
+    // '    <div class="progress-bar" style="width: 10%; background-color: #a3cfbb"></div>' +
+    // '    <div class="progress-bar" style="width: 15%; background-color: #fecba1"></div>' +
+    // '    <div class="progress-bar" style="width: 15%; background-color: #feb272"></div>' +
+    // '    <div class="progress-bar" style="width: 10%; background-color: #dc3545"></div>' +
+    '{{distribute}}' +
+    '  </div>' +
+    '</div>' +
     '</div></button></h2></div>'
 const card = '<div class="accordion-item shadow">' +
     '<h2 class="accordion-header" id="{{headingId}}">' +
@@ -78,6 +85,15 @@ let lever = 0
 const precision = 10000
 let base_size = 1, unit = 100
 const maker_fee = 0.0005, taker_fee = 0.0002
+
+const distribute_depth = {
+    1: '#479f76',
+    3: '#75b798',
+    7: '#a3cfbb',
+    15: '#fecba1',
+    31: '#feb272',
+    63: '#dc3545',
+}
 
 function floatNum(num) {
     return Math.round(parseFloat(num) * precision) / precision
@@ -155,7 +171,8 @@ function createCard(mo) {
 }
 
 function createHeadCard(dmo, is_dashboard) {
-    let long = 0, short = 0, pnl = 0, date = '', end = '', day = 0, night = 0
+    let long = 0, short = 0, pnl = 0, date = '', end = '', day = 0, night = 0, ttl_d = 0
+    const size_distribute = {}
     for (let mo of dmo) {
         if (date === '')
             date = mo.start.substring(0, 10)
@@ -175,7 +192,23 @@ function createHeadCard(dmo, is_dashboard) {
             pnl += Math.round(parseFloat(mo.pnl) * precision)
         if (pnl === prev)
             end = runningIcon
+
+        if (!is_dashboard) {
+            let sd = size_distribute[mo.ttlSz]
+            sd = sd ? sd : 0
+            size_distribute[mo.ttlSz] = sd + 1
+            ttl_d += 1
+        }
     }
+
+    const arr = [], title = [],
+        progress = '<div class="progress-bar" style="width: {{len}}%; background-color: {{color}}"></div>'
+    for (let k in size_distribute) {
+        arr.push(progress.replace('{{len}}', (size_distribute[k] / ttl_d * 100) + '')
+            .replace('{{color}}', distribute_depth[k]))
+        title.push(k + ': ' + size_distribute[k])
+    }
+
     return headCard.replace('{{date}}', is_dashboard ? '<b>Dashboard</b>' : date)
         .replace('{{ttl}}', (long + short) + '')
         .replace('{{long}}', long + '')
@@ -185,6 +218,9 @@ function createHeadCard(dmo, is_dashboard) {
         .replace('{{day}}', day + '')
         .replace('{{night}}', night + '')
         .replace('{{end}}', end)
+        .replace('{{progress}}', is_dashboard ? 'hide' : '')
+        .replace('{{title}}', title.join('<br>'))
+        .replace('{{distribute}}', arr.join(''))
 }
 
 function displayAccordion(mos) {
@@ -381,6 +417,9 @@ const doAnalysis = function (event) {
     $('#lever').val(lever)
     displayAccordion(martinOrders)
     $('.accordion:first')[0].classList.add('mb-5')
+
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
+    const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
 }
 
 const analysis = function () {
