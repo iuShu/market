@@ -26,6 +26,11 @@ const moon_icon = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16
 const endIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-check-circle-fill" viewBox="0 0 16 16" color="blue">\n' +
     '<path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"></path>\n' +
     '</svg>'
+const coinIcon = '<svg xmlns="http://www.w3.org/2000/svg" color="{{color}}" width="16" height="16" fill="currentColor" class="bi bi-coin" viewBox="0 0 16 16">\n' +
+    '  <path d="M5.5 9.511c.076.954.83 1.697 2.182 1.785V12h.6v-.709c1.4-.098 2.218-.846 2.218-1.932 0-.987-.626-1.496-1.745-1.76l-.473-.112V5.57c.6.068.982.396 1.074.85h1.052c-.076-.919-.864-1.638-2.126-1.716V4h-.6v.719c-1.195.117-2.01.836-2.01 1.853 0 .9.606 1.472 1.613 1.707l.397.098v2.034c-.615-.093-1.022-.43-1.114-.9H5.5zm2.177-2.166c-.59-.137-.91-.416-.91-.836 0-.47.345-.822.915-.925v1.76h-.005zm.692 1.193c.717.166 1.048.435 1.048.91 0 .542-.412.914-1.135.982V8.518l.087.02z"/>\n' +
+    '  <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>\n' +
+    '  <path d="M8 13.5a5.5 5.5 0 1 1 0-11 5.5 5.5 0 0 1 0 11zm0 .5A6 6 0 1 0 8 2a6 6 0 0 0 0 12z"/>\n' +
+    '</svg>'
 
 const ttl = '<div class="row" style="width: 100%">' +
     '<div class="col-1"><span class="badge rounded-pill text-bg-{{badge}}">{{side}}</span></div>' +
@@ -60,7 +65,9 @@ const headCard = '<div class="accordion-item shadow">' +
     '</div>' +
     // '<div class="col-2"><b class="pe-2" style="color: {{color}}">PNL {{pnl}}</b>{{end}}</div>' +
     '<div class="col-2"><span class="badge rounded-pill text-bg-{{color}} ms-3" style="font-size: 14px">PNL {{pnl}}</span></div>' +
-    '<div class="col-4 pt-1" {{progress}}>' +
+    '{{progress}}' +
+    '</div></button></h2></div>'
+const progressBar = '<div class="col-4 pt-1">' +
     '  <div class="progress" role="progressbar" aria-label="pos stat" aria-valuemin="0" aria-valuemax="100" style="width: 90%" data-bs-toggle="tooltip" data-bs-html="true" title="{{title}}">' +
     // '    <div class="progress-bar" style="width: 35%; background-color: #479f76"></div>' +
     // '    <div class="progress-bar" style="width: 15%; background-color: #75b798"></div>' +
@@ -70,8 +77,15 @@ const headCard = '<div class="accordion-item shadow">' +
     // '    <div class="progress-bar" style="width: 10%; background-color: #dc3545"></div>' +
     '{{distribute}}' +
     '  </div>' +
-    '</div>' +
-    '</div></button></h2></div>'
+    '</div>'
+const pnlDesc = '<div class="col">' +
+    '<span class="badge rounded-pill text-bg-light" title="profit($)">' + coinIcon.replace('{{color}}', 'green') +
+    ' <span style="color: green">{{profit}}</span>' +
+    '</span>' +
+    '<span class="badge rounded-pill text-bg-light ms-2" title="loss($)">' + coinIcon.replace('{{color}}', 'red') +
+    ' <span style="color: red">{{loss}}</span>' +
+    '</span>' +
+    '</div>'
 const card = '<div class="accordion-item shadow">' +
     '<h2 class="accordion-header" id="{{headingId}}">' +
     '<button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#{{collapseId}}" aria-expanded="false" aria-controls="{{collapseId}}">{{title}}</button>' +
@@ -171,7 +185,8 @@ function createCard(mo) {
 }
 
 function createHeadCard(dmo, is_dashboard) {
-    let long = 0, short = 0, pnl = 0, date = '', end = '', day = 0, night = 0, ttl_d = 0
+    let long = 0, short = 0, pnl = 0, pnl_p = 0, pnl_n = 0, date = '', end = '',
+        day = 0, night = 0, ttl_d = 0
     const size_distribute = {}
     for (let mo of dmo) {
         if (date === '')
@@ -188,8 +203,12 @@ function createHeadCard(dmo, is_dashboard) {
             night++
 
         const prev = pnl
-        if (mo.pnl !== '')
-            pnl += Math.round(parseFloat(mo.pnl) * precision)
+        if (mo.pnl !== '') {
+            const p = parseFloat(mo.pnl)
+            pnl += Math.round(p * precision)
+            pnl_p += p > 0 ? p : 0
+            pnl_n += p < 0 ? p : 0
+        }
         if (pnl === prev)
             end = runningIcon
 
@@ -208,6 +227,10 @@ function createHeadCard(dmo, is_dashboard) {
             .replace('{{color}}', distribute_depth[k]))
         title.push(k + ': ' + size_distribute[k])
     }
+    const pb = progressBar.replace('{{distribute}}', arr.join(''))
+        .replace('{{title}}', title.join('<br>'))
+    const pd = pnlDesc.replace('{{profit}}', pnl_p.toFixed(2))
+        .replace('{{loss}}', pnl_n.toFixed(2))
 
     return headCard.replace('{{date}}', is_dashboard ? '<b>Dashboard</b>' : date)
         .replace('{{ttl}}', (long + short) + '')
@@ -218,9 +241,7 @@ function createHeadCard(dmo, is_dashboard) {
         .replace('{{day}}', day + '')
         .replace('{{night}}', night + '')
         .replace('{{end}}', end)
-        .replace('{{progress}}', is_dashboard ? 'hide' : '')
-        .replace('{{title}}', title.join('<br>'))
-        .replace('{{distribute}}', arr.join(''))
+        .replace('{{progress}}', is_dashboard ? pd : pb)
 }
 
 function displayAccordion(mos) {
