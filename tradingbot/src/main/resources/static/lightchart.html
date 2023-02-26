@@ -1,0 +1,219 @@
+<html>
+<head>
+	<title>TradingView</title>
+	<script type="text/javascript" src="lightweight-charts.standalone.production.js"></script>
+	<script type="text/javascript">
+
+		const theme_light = {
+			layout: {
+				textColor: 'black', 
+				background: { 
+					type: 'solid', 
+					color: 'white' 
+				} 
+			},
+			grid: {}
+		}
+		const theme_dark = {
+			layout: {
+				textColor: '#DDD', 
+				background: { 
+					type: 'solid', 
+					color: '#222' 
+				}
+			},
+			grid: {
+	            vertLines: { color: '#444' },
+	            horzLines: { color: '#444' },
+	    	}
+		}
+
+		const ccy = window.navigator.languages[0]
+		const pxFormat = Intl.NumberFormat(ccy, {style: 'currency', currency: 'USD'}).format
+
+		const crosshair = {
+			// Change mode from default 'magnet' to 'normal'.
+	        // Allows the crosshair to move freely without snapping to datapoints
+	        mode: LightweightCharts.CrosshairMode.Normal,
+
+	        // Vertical crosshair line (showing Date in Label)
+	        vertLine: {
+	            width: 10,
+	            color: '#C3BCDB44',
+	            style: LightweightCharts.LineStyle.Solid,
+	            labelBackgroundColor: '#9B7DFF',
+	        },
+
+	        // Horizontal crosshair line (showing Price in Label)
+	        horzLine: {
+	            color: '#9B7DFF',
+	            labelBackgroundColor: '#9B7DFF',
+	        }
+		}
+
+		const theme = theme_dark
+		let chart, candle
+		function init() {
+			console.log('htloo')
+			const main = document.getElementById('main')
+			// const chart = LightweightCharts.createChart(main, {
+			//   width: 400,
+			//   height: 300
+			// });
+
+			const chartOptions = { 
+				width: 800,
+				height: 550,
+				// color: '#2962FF',
+				layout: theme['layout'],
+				grid: theme['grid'],
+				localization: {
+					priceFormatter: pxFormat
+				},
+				crosshair: crosshair
+			};
+			chart = LightweightCharts.createChart(main, chartOptions);
+
+			// const areaSeries = chart.addAreaSeries({
+			//     lineColor: '#2962FF', topColor: '#2962FF',
+			//     bottomColor: 'rgba(41, 98, 255, 0.28)',
+			// });
+			// areaSeries.setData([
+			//     { time: '2018-12-22', value: 32.51 },
+			//     { time: '2018-12-23', value: 31.11 },
+			//     { time: '2018-12-24', value: 27.02 },
+			//     { time: '2018-12-25', value: 27.32 },
+			//     { time: '2018-12-26', value: 25.17 },
+			//     { time: '2018-12-27', value: 28.89 },
+			//     { time: '2018-12-28', value: 25.46 },
+			//     { time: '2018-12-29', value: 23.92 },
+			//     { time: '2018-12-30', value: 22.68 },
+			//     { time: '2018-12-31', value: 22.67 },
+			// ]);
+
+			candle = chart.addCandlestickSeries({
+			    upColor: '#26a69a', downColor: '#ef5350', borderVisible: false,
+			    wickUpColor: '#26a69a', wickDownColor: '#ef5350',
+			});
+			candle.setData([
+			    { time: '2018-12-22', open: 75.16, high: 82.84, low: 36.16, close: 45.72 },
+			    { time: '2018-12-23', open: 45.72, high: 53.90, low: 45.12, close: 48.09 },
+			    { time: '2018-12-24', open: 48.09, high: 60.71, low: 53.39, close: 59.29 },
+			    { time: '2018-12-25', open: 59.29, high: 68.26, low: 59.04, close: 60.50 },
+			    { time: '2018-12-26', open: 60.50, high: 105.85, low: 66.67, close: 91.04 },
+			    { time: '2018-12-27', open: 91.04, high: 121.40, low: 82.70, close: 111.40 },
+			    { time: '2018-12-28', open: 111.40, high: 142.83, low: 103.34, close: 131.25 },
+			    { time: '2018-12-29', open: 131.25, high: 151.17, low: 77.68, close: 96.43 },
+			    { time: '2018-12-30', open: 96.43, high: 110.20, low: 90.39, close: 98.10 },
+			    { time: '2018-12-31', open: 98.10, high: 114.69, low: 85.66, close: 111.26 },
+			]);
+
+			// const histogramSeries = chart.addHistogramSeries({color: '#26a69a'})
+			// histogramSeries.setData([
+			// 	{ time: '2018-12-22', value: 321234.51 },
+			//     { time: '2018-12-23', value: 315645.11 },
+			//     { time: '2018-12-24', value: 279453.02 },
+			//     { time: '2018-12-25', value: 273412.32 },
+			//     { time: '2018-12-26', value: 250083.17 },
+			//     { time: '2018-12-27', value: 287231.89 },
+			//     { time: '2018-12-28', value: 255384.46 },
+			//     { time: '2018-12-29', value: 238231.92 },
+			//     { time: '2018-12-30', value: 220904.68 },
+			//     { time: '2018-12-31', value: 220003.67 },
+			// ])
+
+			addLegend(main)
+			addMarkers()
+
+			chart.timeScale().applyOptions({borderColor: "#71649C"});
+			chart.timeScale().fitContent();
+			// window.setTimeout(randomData, 3000)
+			window.setInterval(randomData, 900)
+		}
+
+		function addLegend(ele) {
+			const symbolName = 'ETC/USDT';
+			const legend = document.createElement('div');
+			legend.style = `position: absolute; left: 16px; top: 66px; z-index: 1; font-size: 14px; font-family: sans-serif; line-height: 18px; font-weight: 300;`;
+			ele.appendChild(legend);
+
+			const firstRow = document.createElement('div');
+			firstRow.innerHTML = symbolName;
+			firstRow.style.color = 'white';
+			legend.appendChild(firstRow);
+
+			chart.subscribeCrosshairMove(param => {
+				let desc = '';
+				if (param.time) {
+					const data = param.seriesData.get(candle);
+					const percent = (data.close - data.open) / data.open * 100
+					desc = `${data.time} O:${data.open.toFixed(2)} H:${data.high.toFixed(2)} L:${data.low.toFixed(2)} C:${data.close.toFixed(2)} ${percent.toFixed(2)}%`;
+				}
+				firstRow.innerHTML = `${symbolName} <strong>${desc}</strong>`;
+			});
+		}
+
+		function addMarkers() {
+			const markers = [{
+				time: {year:2018,month:12,day:25},
+				position: 'belowBar',
+				color: '#2196F3',
+				shape: 'arrowUp',
+				text: 'Buy at 59.04'
+			} ,{
+				time: {year:2018,month:12,day:29},
+				position: 'aboveBar',
+				color: '#e91e63',
+				shape: 'arrowDown',
+				text: 'Sell at 150.13'
+			}]
+			candle.setMarkers(markers)
+		}
+
+		const recent = { time: '2018-12-31', open: 98.10, high: 114.69, low: 85.66, close: 111.26 }
+		function randomData() {
+			console.log('start updating')
+			// let copy = {time: recent['time'], open: recent['open'], high: recent['high'], low: recent['low'], close: ['close']}
+			const side = Math.random() > 0.5 ? 1 : -1
+			const newPx = Math.random() * side + recent['high']
+
+			if (newPx < recent['low'])
+				recent['low'] = newPx
+			if (newPx > recent['high'])
+				recent['high'] = newPx
+
+			recent['close'] = newPx
+			candle.update(recent)
+		}
+
+	</script>
+	<style type="text/css">
+		body {
+			padding: 0;
+			margin: 0;
+		}
+		.container {
+			margin: 10px 10px;
+			background-color: #e6e6e7;
+			height: 100%;
+			text-align: center;
+		}
+	</style>
+</head>
+<body onload="init()">
+<!-- <body> -->
+
+	<div class="container" id="container">
+		<div class="header">
+			<h2>TradingView</h2>
+		</div>
+		<div class="main" id="main">
+			
+		</div>
+		<div class="footer">
+			
+		</div>
+	</div>
+
+</body>
+</html>
